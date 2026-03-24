@@ -121,7 +121,7 @@ class TestCalculator:
         assert result.taxable_income == 3_350_000
         assert result.nontaxable_income == 550_000
         assert result.total_pay == 3_900_000
-        assert result.net_pay == result.total_pay - result.total_employee
+        assert result.net_pay == result.total_pay - result.total_deduction
 
 
 class TestAPI:

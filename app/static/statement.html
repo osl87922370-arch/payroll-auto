@@ -359,9 +359,19 @@
                     </thead>
                     <tbody>
                         ${deductRows}
-                        <tr class="sub-total" style="background:#fee2e2;">
-                            <td><strong>공제 합계</strong></td>
-                            <td><strong>${fmt(d.total_employee)}원</strong></td>
+                        <tr class="sub-total">
+                            <td>4대 보험 소계</td>
+                            <td>${fmt(d.total_employee)}원</td>
+                        </tr>
+                        <tr><td>소득세</td><td>${fmt(d.tax ? d.tax.income_tax : 0)}원</td></tr>
+                        <tr><td>주민세</td><td>${fmt(d.tax ? d.tax.resident_tax : 0)}원</td></tr>
+                        <tr class="sub-total">
+                            <td>세금 소계</td>
+                            <td>${fmt(d.tax ? d.tax.total_tax : 0)}원</td>
+                        </tr>
+                        <tr class="sub-total" style="background:#fee2e2; font-size:1rem;">
+                            <td><strong>총 공제액</strong></td>
+                            <td><strong>${fmt(d.total_deduction || d.total_employee)}원</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -389,9 +399,9 @@
             </div>
 
             <div class="net-pay-section">
-                <div class="label">실수령액 (총 지급액 - 공제 합계)</div>
+                <div class="label">실수령액 (총 지급액 - 총 공제액)</div>
                 <div class="amount">${fmt(d.net_pay)}원</div>
-                <div class="note">* 소득세/주민세 별도</div>
+                <div class="note">* 간이세액표 기준 추정치</div>
             </div>
 
             <div class="signature-area">

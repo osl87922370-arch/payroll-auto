@@ -559,7 +559,9 @@
                     <th>직원</th>
                     <th>총 지급액</th>
                     <th>사업주 부담</th>
-                    <th>근로자 공제</th>
+                    <th>4대보험</th>
+                    <th>소득세/주민세</th>
+                    <th>총 공제</th>
                     <th>실수령액</th>
                     <th>명세서</th>
                 </tr>
@@ -987,6 +989,7 @@
         document.getElementById('modalName').value = emp.name || '';
         document.getElementById('modalRole').value = emp.role || '';
         document.getElementById('modalBaseSalary').value = emp.base_salary > 0 ? fmt(emp.base_salary) : '';
+        document.getElementById('modalDependents').value = emp.dependents || 1;
 
         // 시급 모드 복원
         const a2 = emp.allowances || {};
@@ -1072,6 +1075,7 @@
             name: document.getElementById('modalName').value.trim(),
             role: document.getElementById('modalRole').value.trim(),
             base_salary: baseSalary,
+            dependents: Number(document.getElementById('modalDependents').value) || 1,
             allowances: allowances,
         };
 
@@ -1124,14 +1128,21 @@
 
             // 테이블
             let html = '';
+            let sumTax = 0;
+            let sumDeduction = 0;
             for (const r of data.results) {
                 const nameDisplay = r.employee_name || '-';
                 const roleDisplay = r.employee_role ? ` <span style="color:#9ca3af; font-size:0.75rem;">${r.employee_role}</span>` : '';
+                const taxAmt = r.tax ? r.tax.total_tax : 0;
+                sumTax += taxAmt;
+                sumDeduction += r.total_deduction || (r.total_employee + taxAmt);
                 html += `<tr>
                     <td><strong>${nameDisplay}</strong>${roleDisplay}</td>
                     <td>${fmt(r.total_pay)}원</td>
                     <td class="employer-val">${fmt(r.total_employer)}원</td>
                     <td class="employee-val">${fmt(r.total_employee)}원</td>
+                    <td style="color:#9333ea;">${fmt(taxAmt)}원</td>
+                    <td style="color:#dc2626; font-weight:600;">${fmt(r.total_deduction || r.total_employee + taxAmt)}원</td>
                     <td><strong>${fmt(r.net_pay)}원</strong></td>
                     <td><a class="emp-link" href="/statement/${r.employee_id}" target="_blank">보기</a></td>
                 </tr>`;
@@ -1141,6 +1152,8 @@
                 <td>${fmt(data.total_pay_sum)}원</td>
                 <td class="employer-val">${fmt(data.total_employer_sum)}원</td>
                 <td class="employee-val">${fmt(data.total_employee_sum)}원</td>
+                <td style="color:#9333ea;">${fmt(sumTax)}원</td>
+                <td style="color:#dc2626; font-weight:600;">${fmt(sumDeduction)}원</td>
                 <td><strong>${fmt(data.total_net_pay_sum)}원</strong></td>
                 <td></td>
             </tr>`;
