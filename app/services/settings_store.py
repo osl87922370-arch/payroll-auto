@@ -6,9 +6,9 @@ from pathlib import Path
 DATA_FILE = Path(__file__).parent.parent / "data" / "settings.json"
 
 DEFAULT_SETTINGS = {
-    "apply_year": 2025,
+    "apply_year": 2026,
     # 최저임금
-    "minimum_wage": 10030,
+    "minimum_wage": 10320,
     "minimum_wage_update": "매년 1월",
     # 국민연금
     "national_pension_rate": 0.045,

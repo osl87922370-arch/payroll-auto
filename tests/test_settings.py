@@ -25,13 +25,13 @@ class TestSettingsStore:
         settings_store.seed_defaults_if_empty()
         s = settings_store.load_settings()
         assert s["national_pension_rate"] == 0.045
-        assert s["minimum_wage"] == 10030
-        assert s["apply_year"] == 2025
+        assert s["minimum_wage"] == 10320
+        assert s["apply_year"] == 2026
 
     def test_update_settings(self):
         settings_store.seed_defaults_if_empty()
         updated = settings_store.update_settings({"minimum_wage": 11000})
-        assert updated["minimum_wage"] == 11000
+        assert updated["minimum_wage"] == 11000  # 변경된 값
         # 다른 값은 유지
         assert updated["national_pension_rate"] == 0.045
 
@@ -39,7 +39,7 @@ class TestSettingsStore:
         settings_store.seed_defaults_if_empty()
         settings_store.update_settings({"minimum_wage": 99999})
         reset = settings_store.reset_settings()
-        assert reset["minimum_wage"] == 10030
+        assert reset["minimum_wage"] == 10320
 
 
 class TestSettingsAPI:
@@ -48,8 +48,8 @@ class TestSettingsAPI:
         res = client.get("/api/settings/")
         assert res.status_code == 200
         data = res.json()
-        assert data["minimum_wage"] == 10030
-        assert data["apply_year"] == 2025
+        assert data["minimum_wage"] == 10320
+        assert data["apply_year"] == 2026
 
     def test_update_settings(self, client):
         settings_store.seed_defaults_if_empty()
@@ -93,4 +93,4 @@ class TestSettingsAPI:
         })
         res = client.post("/api/settings/reset")
         assert res.status_code == 200
-        assert res.json()["minimum_wage"] == 10030
+        assert res.json()["minimum_wage"] == 10320
