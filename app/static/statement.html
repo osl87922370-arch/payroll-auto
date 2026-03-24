@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>급여 명세서</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+        }
+
+        .no-print {
+            text-align: center;
+            padding: 1rem;
+            background: #1e40af;
+        }
+
+        .no-print button {
+            padding: 0.6rem 2rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: white;
+            background: #2563eb;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 0.5rem;
+        }
+
+        .no-print button:hover { background: #1d4ed8; }
+
+        .no-print a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin: 0 1rem;
+        }
+
+        .no-print a:hover { color: white; }
+
+        /* 명세서 본체 */
+        .statement {
+            max-width: 700px;
+            margin: 2rem auto;
+            background: white;
+            padding: 3rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+
+        /* 명세서 헤더 */
+        .stmt-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 3px double #1a1a2e;
+        }
+
+        .stmt-header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 0.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stmt-period {
+            font-size: 1rem;
+            color: #4b5563;
+            margin-bottom: 1rem;
+        }
+
+        .stmt-employee {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .stmt-employee span { font-weight: 600; }
+
+        /* 섹션 */
+        .stmt-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .stmt-section h2 {
+            font-size: 1rem;
+            font-weight: 700;
+            padding: 0.5rem 0.7rem;
+            background: #f1f5f9;
+            border-left: 4px solid #2563eb;
+            margin-bottom: 0.5rem;
+        }
+
+        .stmt-section h2.deduction-title {
+            border-left-color: #dc2626;
+        }
+
+        .stmt-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .stmt-table th, .stmt-table td {
+            padding: 0.55rem 0.8rem;
+            font-size: 0.88rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stmt-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+            width: 25%;
+        }
+
+        .stmt-table td { text-align: right; }
+        .stmt-table td:first-child { text-align: left; font-weight: 500; }
+
+        .stmt-table .sub-total {
+            background: #f8fafc;
+            font-weight: 700;
+        }
+
+        .stmt-table .nontax-label {
+            color: #16a34a;
+            font-size: 0.75rem;
+            margin-left: 0.3rem;
+        }
+
+        .stmt-table .tax-label {
+            color: #dc2626;
+            font-size: 0.75rem;
+            margin-left: 0.3rem;
+        }
+
+        /* 실수령액 */
+        .net-pay-section {
+            margin-top: 2rem;
+            padding: 1.2rem;
+            border: 3px solid #2563eb;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .net-pay-section .label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .net-pay-section .amount {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #2563eb;
+            margin-top: 0.3rem;
+        }
+
+        .net-pay-section .note {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 0.3rem;
+        }
+
+        /* 서명란 */
+        .signature-area {
+            display: flex;
+            justify-content: flex-end;
+            gap: 2rem;
+            margin-top: 3rem;
+            padding-top: 1rem;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 120px;
+        }
+
+        .signature-box .line {
+            border-bottom: 1px solid #1a1a2e;
+            height: 3rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .signature-box .title {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1rem;
+            color: #6b7280;
+        }
+
+        .error {
+            text-align: center;
+            padding: 4rem;
+            color: #dc2626;
+        }
+
+        /* 인쇄 스타일 */
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .statement {
+                margin: 0;
+                padding: 2rem;
+                box-shadow: none;
+                max-width: none;
+            }
+            @page { margin: 15mm; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <a href="/employees">← 직원 관리로 돌아가기</a>
+    <button onclick="window.print()">인쇄하기</button>
+</div>
+
+<div class="statement" id="statement">
+    <div class="loading" id="loadingMsg">급여 명세서를 불러오는 중...</div>
+</div>
+
+<script>
+    const API = window.location.origin;
+
+    function fmt(n) { return n.toLocaleString('ko-KR'); }
+
+    function getEmployeeId() {
+        const path = window.location.pathname;
+        const parts = path.split('/');
+        return parts[parts.length - 1];
+    }
+
+    function getCurrentMonth() {
+        const now = new Date();
+        return `${now.getFullYear()}년 ${String(now.getMonth() + 1).padStart(2, '0')}월`;
+    }
+
+    async function loadStatement() {
+        const empId = getEmployeeId();
+        const container = document.getElementById('statement');
+
+        try {
+            const res = await fetch(API + '/api/employees/' + empId + '/statement');
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || '데이터를 불러올 수 없습니다.');
+            }
+
+            const d = await res.json();
+            document.title = `급여 명세서 - ${d.employee_name}`;
+            renderStatement(container, d);
+        } catch (e) {
+            container.innerHTML = `<div class="error">
+                <p style="font-size:1.2rem; font-weight:700; margin-bottom:0.5rem;">오류</p>
+                <p>${e.message}</p>
+                <p style="margin-top:1rem;"><a href="/employees">직원 관리로 돌아가기</a></p>
+            </div>`;
+        }
+    }
+
+    function renderStatement(container, d) {
+        const a = d.allowances;
+
+        // 지급 내역 구성
+        let payRows = '';
+        payRows += payRow('기본급', d.base_salary);
+
+        // 과세 수당
+        const taxItems = [
+            ['주휴수당', a.weekly_holiday],
+            ['월차수당', a.monthly_leave],
+            ['연장근로수당', a.overtime],
+            ['휴일근로수당', a.holiday_work],
+            ['야간근로수당', a.night_work],
+            ['직책수당', a.position],
+            ['상여금', a.bonus],
+            ['가족수당', a.family],
+            ['근속수당', a.tenure],
+            ['기타 과세 수당', a.other_taxable],
+        ];
+
+        for (const [name, val] of taxItems) {
+            if (val > 0) payRows += payRow(name + ' <span class="tax-label">(과세)</span>', val);
+        }
+
+        // 비과세 과세분
+        if (a.meal_taxable > 0) payRows += payRow('식대 <span class="tax-label">(과세분)</span>', a.meal_taxable);
+        if (a.fuel_taxable > 0) payRows += payRow('유류대 <span class="tax-label">(과세분)</span>', a.fuel_taxable);
+        if (a.childcare_taxable > 0) payRows += payRow('육아수당 <span class="tax-label">(과세분)</span>', a.childcare_taxable);
+
+        // 비과세
+        if (a.meal_nontaxable > 0) payRows += payRow('식대 <span class="nontax-label">(비과세)</span>', a.meal_nontaxable);
+        if (a.fuel_nontaxable > 0) payRows += payRow('유류대 <span class="nontax-label">(비과세)</span>', a.fuel_nontaxable);
+        if (a.childcare_nontaxable > 0) payRows += payRow('육아수당 <span class="nontax-label">(비과세)</span>', a.childcare_nontaxable);
+        if (a.other_nontaxable > 0) payRows += payRow('기타 비과세 수당 <span class="nontax-label">(비과세)</span>', a.other_nontaxable);
+
+        // 공제 내역
+        let deductRows = '';
+        deductRows += deductRow('국민연금', d.national_pension.employee);
+        deductRows += deductRow('건강보험', d.health_insurance.employee);
+        deductRows += deductRow('장기요양보험', d.long_term_care.employee);
+        deductRows += deductRow('고용보험', d.employment_insurance.employee);
+
+        container.innerHTML = `
+            <div class="stmt-header">
+                <h1>급 여 명 세 서</h1>
+                <div class="stmt-period">${getCurrentMonth()}</div>
+                <div class="stmt-employee">
+                    <div>성명: <span>${d.employee_name || '___________'}</span></div>
+                    <div>직책: <span>${d.employee_role}</span></div>
+                </div>
+            </div>
+
+            <div class="stmt-section">
+                <h2>지급 내역</h2>
+                <table class="stmt-table">
+                    <thead>
+                        <tr>
+                            <th>항목</th>
+                            <th>금액</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${payRows}
+                        <tr class="sub-total">
+                            <td>과세 소득 합계</td>
+                            <td>${fmt(d.taxable_income)}원</td>
+                        </tr>
+                        ${d.nontaxable_income > 0 ? `<tr class="sub-total">
+                            <td>비과세 소득 합계</td>
+                            <td>${fmt(d.nontaxable_income)}원</td>
+                        </tr>` : ''}
+                        <tr class="sub-total" style="background:#e0e7ff; font-size:1rem;">
+                            <td><strong>총 지급액</strong></td>
+                            <td><strong>${fmt(d.total_pay)}원</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="stmt-section">
+                <h2 class="deduction-title">공제 내역 (근로자 부담)</h2>
+                <table class="stmt-table">
+                    <thead>
+                        <tr>
+                            <th>항목</th>
+                            <th>금액</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${deductRows}
+                        <tr class="sub-total" style="background:#fee2e2;">
+                            <td><strong>공제 합계</strong></td>
+                            <td><strong>${fmt(d.total_employee)}원</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="stmt-section">
+                <h2>사업주 부담 내역 (참고)</h2>
+                <table class="stmt-table">
+                    <thead>
+                        <tr><th>항목</th><th>금액</th></tr>
+                    </thead>
+                    <tbody>
+                        ${employerRow('국민연금', d.national_pension.employer)}
+                        ${employerRow('건강보험', d.health_insurance.employer)}
+                        ${employerRow('장기요양보험', d.long_term_care.employer)}
+                        ${employerRow('고용보험', d.employment_insurance.employer)}
+                        ${employerRow('산재보험', d.industrial_accident.employer)}
+                        ${employerRow('퇴직충당금', d.retirement_provision)}
+                        <tr class="sub-total">
+                            <td><strong>사업주 부담 합계</strong></td>
+                            <td><strong>${fmt(d.total_employer)}원</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="net-pay-section">
+                <div class="label">실수령액 (총 지급액 - 공제 합계)</div>
+                <div class="amount">${fmt(d.net_pay)}원</div>
+                <div class="note">* 소득세/주민세 별도</div>
+            </div>
+
+            <div class="signature-area">
+                <div class="signature-box">
+                    <div class="line"></div>
+                    <div class="title">대표이사</div>
+                </div>
+                <div class="signature-box">
+                    <div class="line"></div>
+                    <div class="title">수 령 인</div>
+                </div>
+            </div>
+        `;
+    }
+
+    function payRow(label, amount) {
+        return `<tr><td>${label}</td><td>${fmt(amount)}원</td></tr>`;
+    }
+
+    function deductRow(label, amount) {
+        return `<tr><td>${label}</td><td>${fmt(amount)}원</td></tr>`;
+    }
+
+    function employerRow(label, amount) {
+        return `<tr><td>${label}</td><td>${fmt(amount)}원</td></tr>`;
+    }
+
+    loadStatement();
+</script>
+
+</body>
+</html>

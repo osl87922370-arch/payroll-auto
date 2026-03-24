@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>직원 관리 - 급여 자동정산</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        header h1 { font-size: 1.5rem; font-weight: 700; }
+        header p { margin-top: 0.3rem; font-size: 0.85rem; opacity: 0.85; }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            background: #1e3a8a;
+            padding: 0.5rem;
+        }
+
+        nav a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            transition: all 0.15s;
+        }
+
+        nav a:hover, nav a.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+        }
+
+        /* 직원 카드 그리드 */
+        .emp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .emp-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.2rem 1.4rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            transition: box-shadow 0.2s;
+        }
+
+        .emp-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.12); }
+
+        .emp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .emp-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .emp-name-empty {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .emp-role {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .emp-role { background: #e0e7ff; color: #3730a3; }
+
+        .emp-info {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .emp-salary {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 0.8rem;
+        }
+
+        .emp-salary strong {
+            color: #1a1a2e;
+            font-size: 1rem;
+        }
+
+        .emp-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .emp-actions button {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+        }
+
+        .btn-edit {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-edit:hover { background: #e5e7eb; }
+
+        .btn-statement {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-statement:hover { background: #1d4ed8; }
+        .btn-statement:disabled { background: #93c5fd; cursor: not-allowed; }
+
+        .btn-delete {
+            flex: none;
+            width: 32px;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            background: #fef2f2;
+            color: #dc2626;
+            transition: all 0.15s;
+        }
+
+        .btn-delete:hover { background: #fee2e2; }
+
+        .btn-add {
+            padding: 0.5rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            background: #16a34a;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-add:hover { background: #15803d; }
+
+        /* 일괄 계산 섹션 */
+        .batch-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+
+        .batch-section h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .batch-btn {
+            width: 100%;
+            padding: 0.85rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            background: #2563eb;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        .batch-btn:hover { background: #1d4ed8; }
+        .batch-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+        /* 결과 테이블 */
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            display: none;
+        }
+
+        .result-table.visible { display: table; }
+
+        .result-table th, .result-table td {
+            padding: 0.7rem 0.8rem;
+            font-size: 0.85rem;
+            text-align: right;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .result-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #6b7280;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.78rem;
+        }
+
+        .result-table th:first-child,
+        .result-table td:first-child { text-align: left; }
+
+        .result-table tr:hover { background: #f9fafb; }
+
+        .result-table .total-row {
+            background: #f0f4ff;
+            font-weight: 700;
+        }
+
+        .result-table .total-row td { border-top: 2px solid #2563eb; }
+
+        .result-table .emp-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .result-table .emp-link:hover { text-decoration: underline; }
+
+        .employer-val { color: #dc2626; }
+        .employee-val { color: #2563eb; }
+
+        /* 총 비용 요약 */
+        .cost-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .cost-summary.visible { display: grid; }
+
+        .cost-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .cost-card .label { font-size: 0.75rem; color: #6b7280; }
+        .cost-card .value { font-size: 1.1rem; font-weight: 700; margin-top: 0.2rem; }
+
+        /* 모달 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 5vh;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            margin-bottom: 2rem;
+        }
+
+        .modal h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+        }
+
+        .modal .field {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .modal .field label {
+            width: 120px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #374151;
+            flex-shrink: 0;
+        }
+
+        .modal .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .modal .input-wrapper input {
+            width: 100%;
+            padding: 0.55rem 2.2rem 0.55rem 0.7rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            outline: none;
+            text-align: right;
+            transition: border-color 0.2s;
+        }
+
+        .modal .input-wrapper input:focus { border-color: #2563eb; }
+
+        .modal .input-wrapper .suffix {
+            position: absolute;
+            right: 0.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 0.8rem;
+        }
+
+        .modal .section-title {
+            font-size: 0.82rem;
+            color: #6b7280;
+            font-weight: 600;
+            margin: 1rem 0 0.6rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .modal .badge {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-left: 0.2rem;
+        }
+
+        .badge-tax { background: #fef2f2; color: #dc2626; }
+        .badge-nontax { background: #f0fdf4; color: #16a34a; }
+
+        .modal-btns {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .modal-btns button {
+            flex: 1;
+            padding: 0.75rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .modal-btns .btn-cancel {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .modal-btns .btn-save {
+            background: #2563eb;
+            color: white;
+        }
+
+        .modal-btns .btn-save:hover { background: #1d4ed8; }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .biz-size-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .biz-size-bar h3 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .biz-toggle {
+            display: flex;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .biz-toggle button {
+            padding: 0.45rem 1rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            background: white;
+            color: #6b7280;
+            transition: all 0.15s;
+        }
+
+        .biz-toggle button.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        .biz-toggle button:first-child {
+            border-right: 2px solid #e5e7eb;
+        }
+
+        .biz-hint {
+            font-size: 0.78rem;
+            color: #9ca3af;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a2e;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 200;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .toast.show { display: block; }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        @media (max-width: 600px) {
+            .emp-grid { grid-template-columns: 1fr; }
+            .cost-summary { grid-template-columns: repeat(2, 1fr); }
+            .modal .field { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+            .modal .field label { width: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>직원 관리</h1>
+    <p>직원별 급여 설정 및 명세서 관리</p>
+</header>
+<nav>
+    <a href="/">급여 계산기</a>
+    <a href="/employees" class="active">직원 관리</a>
+    <a href="/settings">설정</a>
+</nav>
+
+<div class="container">
+    <!-- 사업장 규모 -->
+    <div class="biz-size-bar">
+        <h3>사업장 규모</h3>
+        <div class="biz-toggle">
+            <button id="bizOver5" class="active" onclick="setBizSize(true)">5인 이상</button>
+            <button id="bizUnder5" onclick="setBizSize(false)">5인 미만</button>
+        </div>
+        <span class="biz-hint" id="bizHint">연장·휴일·야간 가산수당 법적 의무</span>
+    </div>
+
+    <!-- 직원 헤더 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h2 style="font-size:1.05rem; font-weight:700;">직원 목록 (<span id="empCount">0</span>명)</h2>
+        <button class="btn-add" id="addBtn" onclick="addEmployee()">+ 직원 추가</button>
+    </div>
+
+    <!-- 직원 카드 -->
+    <div class="emp-grid" id="empGrid"></div>
+
+    <!-- 일괄 계산 -->
+    <div class="batch-section">
+        <h2>전체 급여 계산</h2>
+        <button class="batch-btn" id="batchBtn" onclick="calculateAll()">전체 계산하기</button>
+
+        <div class="cost-summary" id="costSummary">
+            <div class="cost-card">
+                <div class="label">총 지급액</div>
+                <div class="value" id="sumTotalPay">-</div>
+            </div>
+            <div class="cost-card">
+                <div class="label">사업주 부담 합계</div>
+                <div class="value employer-val" id="sumEmployer">-</div>
+            </div>
+            <div class="cost-card">
+                <div class="label">근로자 공제 합계</div>
+                <div class="value employee-val" id="sumEmployee">-</div>
+            </div>
+            <div class="cost-card">
+                <div class="label">실수령 합계</div>
+                <div class="value" id="sumNetPay">-</div>
+            </div>
+        </div>
+
+        <table class="result-table" id="resultTable">
+            <thead>
+                <tr>
+                    <th>직원</th>
+                    <th>총 지급액</th>
+                    <th>사업주 부담</th>
+                    <th>근로자 공제</th>
+                    <th>실수령액</th>
+                    <th>명세서</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 수정 모달 -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <h2 id="modalTitle">직원 급여 설정</h2>
+
+        <div class="section-title">인적 사항</div>
+        <div class="field">
+            <label>성명</label>
+            <div class="input-wrapper">
+                <input type="text" id="modalName" placeholder="성명을 입력하세요" style="text-align:left; font-weight:500; padding-right:0.7rem;">
+            </div>
+        </div>
+        <div class="field">
+            <label>직책</label>
+            <div class="input-wrapper">
+                <input type="text" id="modalRole" placeholder="직책을 입력하세요" style="text-align:left; font-weight:500; padding-right:0.7rem;">
+            </div>
+        </div>
+
+        <div class="field">
+            <label>부양가족 수</label>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+                <input type="number" id="modalDependents" value="1" min="1" max="20" style="width:60px; padding:0.45rem; font-size:0.95rem; font-weight:600; text-align:center; border:2px solid #e5e7eb; border-radius:6px; outline:none;">
+                <span style="font-size:0.78rem; color:#9ca3af;">명 (본인 포함)</span>
+            </div>
+        </div>
+
+        <div class="section-title">기본급</div>
+
+        <div style="display:flex; gap:0.4rem; margin-bottom:0.8rem;">
+            <button class="wage-mode-btn active" id="modalModeMonthly" onclick="setModalWageMode('monthly')" style="flex:1; padding:0.4rem; font-size:0.78rem; font-weight:600; border:2px solid #2563eb; border-radius:6px; background:#eff6ff; color:#2563eb; cursor:pointer;">월급 직접 입력</button>
+            <button class="wage-mode-btn" id="modalModeHourly" onclick="setModalWageMode('hourly')" style="flex:1; padding:0.4rem; font-size:0.78rem; font-weight:600; border:2px solid #e5e7eb; border-radius:6px; background:white; color:#6b7280; cursor:pointer;">시급 × 근무시간</button>
+        </div>
+
+        <!-- 모드1: 월급 직접 -->
+        <div id="modalMonthlyMode">
+            <div class="field">
+                <label>기본급</label>
+                <div class="input-wrapper">
+                    <input type="text" id="modalBaseSalary" inputmode="numeric">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 모드2: 시급 기반 -->
+        <div id="modalHourlyMode" style="display:none;">
+            <div class="field">
+                <label>시급</label>
+                <div class="input-wrapper">
+                    <input type="text" id="modalHourlyRate" value="10,030" inputmode="numeric">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>1일 근로시간</label>
+                <div class="input-wrapper" style="max-width:100px;">
+                    <input type="text" id="modalDailyHours" value="8" inputmode="decimal" style="text-align:center;">
+                    <span class="suffix">시간</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>주 근무일수</label>
+                <div class="input-wrapper" style="max-width:100px;">
+                    <input type="text" id="modalWeeklyDays" value="5" inputmode="decimal" style="text-align:center;">
+                    <span class="suffix">일</span>
+                </div>
+            </div>
+            <div id="modalHourlyResult" style="background:#f0f4ff; border-radius:6px; padding:0.6rem 0.8rem; margin-top:0.5rem; font-size:0.78rem; color:#374151;">
+                <div style="display:flex; justify-content:space-between;"><span>주 소정근로 / 주휴시간</span><strong id="modalCalcWeekly">-</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-top:0.3rem; padding-top:0.3rem; border-top:1px solid #dbeafe; font-size:0.88rem;"><span>월 기본급 (근로분)</span><strong style="color:#2563eb;" id="modalCalcBase">-</strong></div>
+            </div>
+        </div>
+
+        <div class="section-title">과세 수당</div>
+        <div id="modalTaxFields"></div>
+
+        <div class="section-title">비과세 수당</div>
+        <div id="modalNontaxFields"></div>
+
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeModal()">취소</button>
+            <button class="btn-save" id="modalSaveBtn" onclick="saveEmployee()">저장</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+    급여 자동정산 서비스 v0.3.0 · 2025년 4대 보험 요율 적용
+</footer>
+
+<script>
+    const API = window.location.origin;
+    let currentEmployeeId = null;
+
+    // 수당 필드 정의
+    let isOver5 = true;
+
+    function setBizSize(over5) {
+        isOver5 = over5;
+        document.getElementById('bizOver5').classList.toggle('active', over5);
+        document.getElementById('bizUnder5').classList.toggle('active', !over5);
+        document.getElementById('bizHint').textContent = over5
+            ? '연장·휴일·야간 가산수당 법적 의무'
+            : '가산수당 법적 의무 없음 (주휴수당만 의무)';
+        // 모달이 열려 있으면 필드 상태 갱신
+        updateModalSurchargeFields();
+    }
+
+    const TAX_FIELDS = [
+        { key: 'weekly_holiday', label: '주휴수당', duty: 'mandatory' },
+        { key: 'overtime', label: '연장근로수당', duty: 'surcharge' },
+        { key: 'holiday_work', label: '휴일근로수당', duty: 'surcharge' },
+        { key: 'night_work', label: '야간근로수당', duty: 'surcharge' },
+        { key: 'monthly_leave', label: '월차수당', duty: 'optional' },
+        { key: 'position', label: '직책수당', duty: 'optional' },
+        { key: 'bonus', label: '상여금', duty: 'optional' },
+        { key: 'family', label: '가족수당', duty: 'optional' },
+        { key: 'tenure', label: '근속수당', duty: 'optional' },
+        { key: 'other_taxable', label: '기타 과세', duty: 'optional' },
+    ];
+
+    const NONTAX_FIELDS = [
+        { key: 'meal', label: '식대', hint: '20만원 한도' },
+        { key: 'fuel', label: '유류대', hint: '20만원 한도' },
+        { key: 'childcare', label: '육아수당', hint: '10만원 한도' },
+        { key: 'other_nontaxable', label: '기타 비과세' },
+    ];
+
+    function fmt(n) { return n.toLocaleString('ko-KR'); }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    // ── 직원 목록 로드 ────────────────────────────────
+    async function loadEmployees() {
+        const res = await fetch(API + '/api/employees/');
+        const employees = await res.json();
+        renderEmployeeGrid(employees);
+    }
+
+    function renderEmployeeGrid(employees) {
+        const grid = document.getElementById('empGrid');
+        document.getElementById('empCount').textContent = employees.length;
+        grid.innerHTML = employees.map((emp, idx) => {
+            const hasSalary = emp.base_salary > 0;
+            const hasName = emp.name && emp.name.trim();
+            const hasRole = emp.role && emp.role.trim();
+            const cardTitle = hasName ? emp.name : `직원 ${idx + 1}`;
+            const titleClass = hasName ? '' : 'emp-name-empty';
+
+            // 근무 형태 판별
+            const a = emp.allowances || {};
+            const isHourly = a.hourly_rate && a.hourly_rate > 0;
+            const dailyH = a.daily_hours || 8;
+            const weeklyD = a.weekly_days || 5;
+            const isFullTime = dailyH >= 8 && weeklyD >= 5;
+
+            let workTypeHtml = '';
+            if (isHourly) {
+                const typeLabel = isFullTime ? '풀타임' : '파트타임';
+                const typeColor = isFullTime ? '#2563eb' : '#f59e0b';
+                const typeBg = isFullTime ? '#eff6ff' : '#fffbeb';
+                workTypeHtml = `<span style="font-size:0.7rem; padding:0.15rem 0.4rem; border-radius:4px; font-weight:600; background:${typeBg}; color:${typeColor};">${typeLabel}</span>`;
+                workTypeHtml += `<div style="font-size:0.78rem; color:#9ca3af; margin-top:0.2rem;">시급 ${fmt(a.hourly_rate)}원 · ${dailyH}시간/일 · 주${weeklyD}일</div>`;
+            }
+
+            return `<div class="emp-card">
+                <div class="emp-header">
+                    <span class="emp-name ${titleClass}">${cardTitle}</span>
+                    ${hasRole ? `<span class="emp-role">${emp.role}</span>` : ''}
+                </div>
+                <div class="emp-info">
+                    성명: <strong>${hasName ? emp.name : '미입력'}</strong> · 직책: <strong>${hasRole ? emp.role : '미입력'}</strong>
+                    ${workTypeHtml}
+                </div>
+                <div class="emp-salary">
+                    기본급: <strong>${hasSalary ? fmt(emp.base_salary) + '원' : '미설정'}</strong>
+                </div>
+                <div class="emp-actions">
+                    <button class="btn-edit" onclick="openModal('${emp.id}')">설정</button>
+                    <button class="btn-statement" ${hasSalary ? '' : 'disabled'} onclick="viewStatement('${emp.id}')">명세서</button>
+                    <button class="btn-delete" onclick="deleteEmployee('${emp.id}', '${cardTitle}')" title="삭제">✕</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── 직원 추가 ─────────────────────────────────────
+    async function addEmployee() {
+        const btn = document.getElementById('addBtn');
+        btn.disabled = true;
+        btn.textContent = '추가 중...';
+        try {
+            const res = await fetch(API + '/api/employees/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: '', role: '' }),
+            });
+            if (!res.ok) throw new Error();
+            showToast('직원이 추가되었습니다.');
+            loadEmployees();
+        } catch (e) {
+            showToast('추가에 실패했습니다.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '+ 직원 추가';
+        }
+    }
+
+    // ── 직원 삭제 ─────────────────────────────────────
+    async function deleteEmployee(empId, empName) {
+        if (!confirm(`"${empName}" 직원을 삭제하시겠습니까?\n삭제하면 급여 설정도 함께 삭제됩니다.`)) return;
+        try {
+            const res = await fetch(API + '/api/employees/' + empId, { method: 'DELETE' });
+            if (!res.ok) throw new Error();
+            showToast('삭제되었습니다.');
+            loadEmployees();
+        } catch (e) {
+            showToast('삭제에 실패했습니다.');
+        }
+    }
+
+    // ── 모달 ──────────────────────────────────────────
+    // 가산수당 시간→금액 매핑
+    const SURCHARGE_FIELDS = [
+        { key: 'overtime', label: '연장근로', mult: 1.5, hoursKey: 'overtime_hours' },
+        { key: 'holiday_work', label: '휴일근로', mult: 1.5, hoursKey: 'holiday_work_hours' },
+        { key: 'night_work', label: '야간근로', mult: 0.5, hoursKey: 'night_work_hours' },
+    ];
+
+    function buildModalFields() {
+        // 법정 수당 (자동 계산)
+        let taxHtml = '<p style="font-size:0.78rem; color:#6b7280; margin-bottom:0.5rem; font-weight:600;">법정 의무 수당 (자동 계산)</p>';
+        taxHtml += '<div id="modalAutoCalcInfo" style="background:#f0f4ff; border-radius:6px; padding:0.5rem 0.8rem; margin-bottom:0.8rem; font-size:0.78rem; color:#374151; display:none;">통상시급: <strong id="modalHourlyWage">-</strong>원</div>';
+
+        // 주휴수당 (자동)
+        taxHtml += `<div class="field" id="modalField_weekly_holiday">
+            <label>주휴수당 <span class="badge badge-tax">과세</span><span class="badge badge-tax" style="font-size:0.6rem;">자동</span></label>
+            <div class="input-wrapper">
+                <input type="text" id="modal_weekly_holiday" value="0" readonly style="background:#f0f4ff; color:#2563eb;">
+                <span class="suffix">원</span>
+            </div>
+        </div>`;
+
+        // 가산수당 (시간 입력)
+        for (const sf of SURCHARGE_FIELDS) {
+            taxHtml += `<div class="field surcharge-field" id="modalField_${sf.key}">
+                <label>${sf.label} <span class="badge badge-tax">과세</span><span class="badge badge-tax surcharge-badge" id="modalBadge_${sf.key}" style="font-size:0.6rem;">법정</span></label>
+                <div style="flex:1; display:flex; gap:0.4rem; align-items:center;">
+                    <div class="input-wrapper" style="width:70px; flex:none;">
+                        <input type="text" id="modal_${sf.hoursKey}" value="0" inputmode="numeric" style="text-align:center; font-size:0.85rem;">
+                        <span class="suffix" style="font-size:0.7rem;">시간</span>
+                    </div>
+                    <span style="color:#6b7280; font-size:0.7rem;">×${sf.mult}=</span>
+                    <div class="input-wrapper" style="flex:1;">
+                        <input type="text" id="modal_${sf.key}" value="0" readonly style="background:#f0f4ff; color:#2563eb; font-size:0.85rem;">
+                        <span class="suffix" style="font-size:0.7rem;">원</span>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // 선택 수당
+        taxHtml += '<p style="font-size:0.78rem; color:#6b7280; margin:0.8rem 0 0.5rem; font-weight:600;">선택 수당 (회사 재량)</p>';
+        const optFields = TAX_FIELDS.filter(f => f.duty === 'optional');
+        for (const f of optFields) {
+            taxHtml += `<div class="field" id="modalField_${f.key}">
+                <label>${f.label} <span class="badge badge-tax">과세</span><span class="badge" style="font-size:0.6rem; background:#f3f4f6; color:#9ca3af;">선택</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="modal_${f.key}" inputmode="numeric" value="0">
+                    <span class="suffix">원</span>
+                </div>
+            </div>`;
+        }
+        document.getElementById('modalTaxFields').innerHTML = taxHtml;
+
+        // 비과세 필드
+        let nontaxHtml = '';
+        for (const f of NONTAX_FIELDS) {
+            nontaxHtml += `<div class="field">
+                <label>${f.label} <span class="badge badge-nontax">비과세</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="modal_${f.key}" inputmode="numeric" value="0">
+                    <span class="suffix">원</span>
+                </div>
+            </div>`;
+            if (f.hint) {
+                nontaxHtml += `<div style="font-size:0.72rem; color:#9ca3af; margin: -0.3rem 0 0.5rem 120px; padding-left:0.7rem;">${f.hint}</div>`;
+            }
+        }
+        document.getElementById('modalNontaxFields').innerHTML = nontaxHtml;
+
+        // 자동 콤마 (readonly 제외)
+        document.querySelectorAll('.modal input[inputmode="numeric"]').forEach(input => {
+            if (input.readOnly) return;
+            input.addEventListener('input', function () {
+                const raw = this.value.replace(/[^0-9]/g, '');
+                this.value = raw ? Number(raw).toLocaleString('ko-KR') : '';
+            });
+        });
+
+        // 기본급 변경 시 자동 재계산
+        document.getElementById('modalBaseSalary').addEventListener('input', calcModalLegal);
+
+        // 시간 입력 시 자동 재계산
+        for (const sf of SURCHARGE_FIELDS) {
+            const hourEl = document.getElementById('modal_' + sf.hoursKey);
+            if (hourEl) hourEl.addEventListener('input', calcModalLegal);
+        }
+    }
+
+    let modalWageMode = 'monthly';
+
+    function setModalWageMode(mode) {
+        modalWageMode = mode;
+        const mBtn = document.getElementById('modalModeMonthly');
+        const hBtn = document.getElementById('modalModeHourly');
+        mBtn.style.borderColor = mode === 'monthly' ? '#2563eb' : '#e5e7eb';
+        mBtn.style.background = mode === 'monthly' ? '#eff6ff' : 'white';
+        mBtn.style.color = mode === 'monthly' ? '#2563eb' : '#6b7280';
+        hBtn.style.borderColor = mode === 'hourly' ? '#2563eb' : '#e5e7eb';
+        hBtn.style.background = mode === 'hourly' ? '#eff6ff' : 'white';
+        hBtn.style.color = mode === 'hourly' ? '#2563eb' : '#6b7280';
+        document.getElementById('modalMonthlyMode').style.display = mode === 'monthly' ? 'block' : 'none';
+        document.getElementById('modalHourlyMode').style.display = mode === 'hourly' ? 'block' : 'none';
+        if (mode === 'hourly') calcModalHourly();
+        calcModalLegal();
+    }
+
+    function calcModalHourly() {
+        const rateRaw = document.getElementById('modalHourlyRate').value.replace(/[^0-9]/g, '');
+        const rate = rateRaw ? Number(rateRaw) : 0;
+        const dailyH = parseFloat(document.getElementById('modalDailyHours').value) || 0;
+        const weeklyD = parseFloat(document.getElementById('modalWeeklyDays').value) || 0;
+        const weeklyHours = dailyH * weeklyD;
+        const weeklyHolidayH = weeklyHours >= 15 ? (weeklyHours / 40) * 8 : 0;
+        const baseSalary = Math.round(rate * weeklyHours * 4.345);
+
+        document.getElementById('modalCalcWeekly').textContent = weeklyHours.toFixed(1) + 'h / ' + weeklyHolidayH.toFixed(1) + 'h';
+        document.getElementById('modalCalcBase').textContent = fmt(baseSalary) + '원';
+
+        document.getElementById('modalBaseSalary').value = fmt(baseSalary);
+        calcModalLegal();
+    }
+
+    // 시급 모드 입력 이벤트
+    document.getElementById('modalHourlyRate').addEventListener('input', function () {
+        const raw = this.value.replace(/[^0-9]/g, '');
+        this.value = raw ? Number(raw).toLocaleString('ko-KR') : '';
+        calcModalHourly();
+    });
+    document.getElementById('modalDailyHours').addEventListener('input', calcModalHourly);
+    document.getElementById('modalWeeklyDays').addEventListener('input', calcModalHourly);
+
+    function getModalHourlyInfo() {
+        if (modalWageMode === 'hourly') {
+            const rateRaw = document.getElementById('modalHourlyRate').value.replace(/[^0-9]/g, '');
+            const rate = rateRaw ? Number(rateRaw) : 0;
+            const dailyH = parseFloat(document.getElementById('modalDailyHours').value) || 0;
+            const weeklyD = parseFloat(document.getElementById('modalWeeklyDays').value) || 0;
+            const weeklyHours = dailyH * weeklyD;
+            const weeklyHolidayH = weeklyHours >= 15 ? (weeklyHours / 40) * 8 : 0;
+            return { hourlyWage: rate, weeklyHolidayH };
+        }
+        const baseRaw = document.getElementById('modalBaseSalary').value.replace(/[^0-9]/g, '');
+        const base = baseRaw ? Number(baseRaw) : 0;
+        return { hourlyWage: base > 0 ? Math.round(base / 209) : 0, weeklyHolidayH: 8 };
+    }
+
+    function calcModalLegal() {
+        const { hourlyWage, weeklyHolidayH } = getModalHourlyInfo();
+
+        const infoEl = document.getElementById('modalAutoCalcInfo');
+        if (hourlyWage > 0) {
+            infoEl.style.display = 'block';
+            if (modalWageMode === 'monthly') {
+                document.getElementById('modalHourlyWage').textContent = fmt(hourlyWage) + ' (주휴 포함)';
+            } else {
+                document.getElementById('modalHourlyWage').textContent = fmt(hourlyWage);
+            }
+        } else {
+            infoEl.style.display = 'none';
+        }
+
+        // 주휴수당: 월급제 → 0 (이미 포함), 시급제 → 자동 계산
+        let whAmt = 0;
+        if (modalWageMode === 'hourly' && hourlyWage > 0) {
+            whAmt = Math.round(hourlyWage * weeklyHolidayH * 4.345);
+        }
+        document.getElementById('modal_weekly_holiday').value = fmt(whAmt);
+
+        // 가산수당
+        for (const sf of SURCHARGE_FIELDS) {
+            const hourEl = document.getElementById('modal_' + sf.hoursKey);
+            const amtEl = document.getElementById('modal_' + sf.key);
+            const hours = hourEl ? parseFloat(hourEl.value.replace(/[^0-9.]/g, '')) || 0 : 0;
+            const amt = Math.round(hourlyWage * sf.mult * hours);
+            if (amtEl) amtEl.value = fmt(amt);
+        }
+    }
+
+    async function openModal(empId) {
+        currentEmployeeId = empId;
+        const res = await fetch(API + '/api/employees/' + empId);
+        const emp = await res.json();
+
+        const displayLabel = emp.name ? emp.name : '직원 급여';
+        document.getElementById('modalTitle').textContent = displayLabel + ' 설정';
+        document.getElementById('modalName').value = emp.name || '';
+        document.getElementById('modalRole').value = emp.role || '';
+        document.getElementById('modalBaseSalary').value = emp.base_salary > 0 ? fmt(emp.base_salary) : '';
+
+        // 시급 모드 복원
+        const a2 = emp.allowances || {};
+        if (a2.hourly_rate && a2.hourly_rate > 0) {
+            document.getElementById('modalHourlyRate').value = fmt(a2.hourly_rate);
+            document.getElementById('modalDailyHours').value = a2.daily_hours || 8;
+            document.getElementById('modalWeeklyDays').value = a2.weekly_days || 5;
+            setModalWageMode('hourly');
+        } else {
+            document.getElementById('modalHourlyRate').value = '10,030';
+            document.getElementById('modalDailyHours').value = '8';
+            document.getElementById('modalWeeklyDays').value = '5';
+            setModalWageMode('monthly');
+        }
+
+        const a = emp.allowances || {};
+        // 선택 수당 + 비과세 수당 값 설정
+        const optFields = TAX_FIELDS.filter(f => f.duty === 'optional');
+        for (const f of [...optFields, ...NONTAX_FIELDS]) {
+            const el = document.getElementById('modal_' + f.key);
+            if (el) {
+                const val = a[f.key] || 0;
+                el.value = val > 0 ? fmt(val) : '0';
+            }
+        }
+
+        // 가산수당 시간 값 설정
+        for (const sf of SURCHARGE_FIELDS) {
+            const hourEl = document.getElementById('modal_' + sf.hoursKey);
+            if (hourEl) {
+                const hours = a[sf.hoursKey] || 0;
+                hourEl.value = hours > 0 ? hours : '0';
+            }
+        }
+
+        // 자동 계산 실행
+        calcModalLegal();
+        updateModalSurchargeFields();
+        document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').classList.remove('open');
+        currentEmployeeId = null;
+    }
+
+    function getModalVal(id) {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const raw = el.value.replace(/[^0-9]/g, '');
+        return raw ? Number(raw) : 0;
+    }
+
+    async function saveEmployee() {
+        const baseSalary = getModalVal('modalBaseSalary');
+        if (baseSalary <= 0) {
+            showToast('기본급을 입력해 주세요.');
+            return;
+        }
+
+        const allowances = {};
+        // 시급 모드 정보 저장
+        if (modalWageMode === 'hourly') {
+            allowances['hourly_rate'] = getModalVal('modalHourlyRate');
+            allowances['daily_hours'] = parseFloat(document.getElementById('modalDailyHours').value) || 0;
+            allowances['weekly_days'] = parseFloat(document.getElementById('modalWeeklyDays').value) || 0;
+        }
+        // 법정 수당 (자동 계산된 금액)
+        allowances['weekly_holiday'] = getModalVal('modal_weekly_holiday');
+        for (const sf of SURCHARGE_FIELDS) {
+            allowances[sf.key] = getModalVal('modal_' + sf.key);
+            // 시간도 저장 (다음에 열 때 복원용)
+            const hourEl = document.getElementById('modal_' + sf.hoursKey);
+            allowances[sf.hoursKey] = hourEl ? (parseFloat(hourEl.value.replace(/[^0-9.]/g, '')) || 0) : 0;
+        }
+        // 선택 수당 + 비과세 수당
+        const optFields = TAX_FIELDS.filter(f => f.duty === 'optional');
+        for (const f of [...optFields, ...NONTAX_FIELDS]) {
+            allowances[f.key] = getModalVal('modal_' + f.key);
+        }
+
+        const body = {
+            name: document.getElementById('modalName').value.trim(),
+            role: document.getElementById('modalRole').value.trim(),
+            base_salary: baseSalary,
+            allowances: allowances,
+        };
+
+        const btn = document.getElementById('modalSaveBtn');
+        btn.disabled = true;
+        btn.textContent = '저장 중...';
+
+        try {
+            const res = await fetch(API + '/api/employees/' + currentEmployeeId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            if (!res.ok) throw new Error('저장 실패');
+
+            showToast('저장되었습니다.');
+            closeModal();
+            loadEmployees();
+        } catch (e) {
+            showToast('저장에 실패했습니다.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '저장';
+        }
+    }
+
+    // ── 전체 계산 ─────────────────────────────────────
+    async function calculateAll() {
+        const btn = document.getElementById('batchBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> 계산 중...';
+
+        try {
+            const res = await fetch(API + '/api/employees/calculate-all', { method: 'POST' });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+
+            if (data.results.length === 0) {
+                showToast('기본급이 설정된 직원이 없습니다.');
+                return;
+            }
+
+            // 요약
+            document.getElementById('sumTotalPay').textContent = fmt(data.total_pay_sum) + '원';
+            document.getElementById('sumEmployer').textContent = fmt(data.total_employer_sum) + '원';
+            document.getElementById('sumEmployee').textContent = fmt(data.total_employee_sum) + '원';
+            document.getElementById('sumNetPay').textContent = fmt(data.total_net_pay_sum) + '원';
+            document.getElementById('costSummary').classList.add('visible');
+
+            // 테이블
+            let html = '';
+            for (const r of data.results) {
+                const nameDisplay = r.employee_name || '-';
+                const roleDisplay = r.employee_role ? ` <span style="color:#9ca3af; font-size:0.75rem;">${r.employee_role}</span>` : '';
+                html += `<tr>
+                    <td><strong>${nameDisplay}</strong>${roleDisplay}</td>
+                    <td>${fmt(r.total_pay)}원</td>
+                    <td class="employer-val">${fmt(r.total_employer)}원</td>
+                    <td class="employee-val">${fmt(r.total_employee)}원</td>
+                    <td><strong>${fmt(r.net_pay)}원</strong></td>
+                    <td><a class="emp-link" href="/statement/${r.employee_id}" target="_blank">보기</a></td>
+                </tr>`;
+            }
+            html += `<tr class="total-row">
+                <td>합계 (${data.results.length}명)</td>
+                <td>${fmt(data.total_pay_sum)}원</td>
+                <td class="employer-val">${fmt(data.total_employer_sum)}원</td>
+                <td class="employee-val">${fmt(data.total_employee_sum)}원</td>
+                <td><strong>${fmt(data.total_net_pay_sum)}원</strong></td>
+                <td></td>
+            </tr>`;
+
+            document.getElementById('resultBody').innerHTML = html;
+            document.getElementById('resultTable').classList.add('visible');
+        } catch (e) {
+            showToast('계산에 실패했습니다.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '전체 계산하기';
+        }
+    }
+
+    // ── 명세서 보기 ───────────────────────────────────
+    function viewStatement(empId) {
+        window.open('/statement/' + empId, '_blank');
+    }
+
+    // ── 모달 외부 클릭 닫기 ──────────────────────────
+    document.getElementById('modalOverlay').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+
+    function updateModalSurchargeFields() {
+        for (const sf of SURCHARGE_FIELDS) {
+            const fieldEl = document.getElementById('modalField_' + sf.key);
+            const badgeEl = document.getElementById('modalBadge_' + sf.key);
+            const hourEl = document.getElementById('modal_' + sf.hoursKey);
+            if (!fieldEl) continue;
+            if (isOver5) {
+                if (badgeEl) { badgeEl.textContent = '법정'; badgeEl.style.background = '#fef2f2'; badgeEl.style.color = '#dc2626'; }
+                if (hourEl) hourEl.disabled = false;
+                fieldEl.style.opacity = '';
+            } else {
+                if (badgeEl) { badgeEl.textContent = '해당없음'; badgeEl.style.background = '#f3f4f6'; badgeEl.style.color = '#d1d5db'; }
+                if (hourEl) { hourEl.disabled = true; hourEl.value = '0'; }
+                fieldEl.style.opacity = '0.5';
+            }
+        }
+        calcModalLegal();
+    }
+
+    // 초기화
+    buildModalFields();
+    loadEmployees();
+</script>
+
+</body>
+</html>

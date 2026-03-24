@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>급여 자동정산 서비스</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        header h1 { font-size: 1.6rem; font-weight: 700; }
+        header p { margin-top: 0.4rem; font-size: 0.9rem; opacity: 0.85; }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            background: #1e3a8a;
+            padding: 0.5rem;
+        }
+
+        nav a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            transition: all 0.15s;
+        }
+
+        nav a:hover, nav a.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* 카드 공통 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 1.2rem;
+        }
+
+        .card h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a1a2e;
+        }
+
+        /* 입력 필드 */
+        .field {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .field label {
+            width: 130px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+            flex-shrink: 0;
+        }
+
+        .field .badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+            margin-left: 0.3rem;
+            vertical-align: middle;
+        }
+
+        .badge-tax { background: #fef2f2; color: #dc2626; }
+        .badge-nontax { background: #f0fdf4; color: #16a34a; }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 0.65rem 2.5rem 0.65rem 0.85rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+            text-align: right;
+        }
+
+        .input-wrapper input:focus { border-color: #2563eb; }
+
+        .input-wrapper .suffix {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        .input-wrapper input.main-input {
+            font-size: 1.2rem;
+            padding: 0.85rem 2.5rem 0.85rem 1rem;
+        }
+
+        /* 버튼 */
+        .btn-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.85rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            background: #2563eb;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: #1d4ed8; }
+        .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+        .btn-outline {
+            background: white;
+            color: #6b7280;
+            border: 2px solid #e5e7eb;
+        }
+
+        .btn-outline:hover { background: #f9fafb; border-color: #d1d5db; }
+
+        /* 안내 박스 */
+        .info-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .info-box summary {
+            padding: 0.6rem 0.85rem;
+            font-size: 0.8rem;
+            color: #2563eb;
+            cursor: pointer;
+            font-weight: 500;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .info-box summary::-webkit-details-marker { display: none; }
+
+        .info-box summary::before {
+            content: '▶';
+            font-size: 0.6rem;
+            transition: transform 0.2s;
+        }
+
+        .info-box[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+        .info-box .info-content {
+            padding: 0 0.85rem 0.75rem;
+            font-size: 0.8rem;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        .info-box .info-content table {
+            width: 100%;
+            margin-top: 0.4rem;
+            border-collapse: collapse;
+        }
+
+        .info-box .info-content th,
+        .info-box .info-content td {
+            padding: 0.35rem 0.5rem;
+            text-align: left;
+            font-size: 0.78rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .info-box .info-content th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .info-box .info-content td:first-child { font-weight: 500; text-align: left; }
+        .info-box .info-content td { text-align: left; }
+
+        .quick-btns {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-btns button {
+            padding: 0.3rem 0.7rem;
+            font-size: 0.78rem;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #4b5563;
+            transition: all 0.15s;
+        }
+
+        .quick-btns button:hover {
+            background: #e0e7ff;
+            border-color: #a5b4fc;
+            color: #2563eb;
+        }
+
+        /* 토글 */
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #2563eb;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 500;
+            padding: 0.3rem 0;
+        }
+
+        .toggle-btn:hover { text-decoration: underline; }
+
+        .allowance-section { display: none; }
+        .allowance-section.open { display: block; }
+
+        /* 사업장 규모 선택 */
+        .biz-size-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.2rem 2rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .biz-size-card h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .biz-toggle {
+            display: flex;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .biz-toggle button {
+            padding: 0.5rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            background: white;
+            color: #6b7280;
+            transition: all 0.15s;
+        }
+
+        .biz-toggle button.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        .biz-toggle button:first-child {
+            border-right: 2px solid #e5e7eb;
+        }
+
+        .biz-size-hint {
+            font-size: 0.78rem;
+            color: #9ca3af;
+        }
+
+        /* 법정/선택 배지 */
+        .badge-mandatory {
+            background: #fef2f2;
+            color: #dc2626;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-weight: 700;
+            margin-left: 0.2rem;
+        }
+
+        .badge-optional {
+            background: #f3f4f6;
+            color: #9ca3af;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-left: 0.2rem;
+        }
+
+        .badge-na {
+            background: #f3f4f6;
+            color: #d1d5db;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-left: 0.2rem;
+        }
+
+        .field-disabled input {
+            background: #f9fafb !important;
+            color: #d1d5db !important;
+        }
+
+        /* 입력 모드 버튼 */
+        .wage-mode-btn {
+            flex: 1;
+            padding: 0.55rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .wage-mode-btn.active {
+            border-color: #2563eb;
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .wage-mode-btn:hover:not(.active) {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+
+        .field-hint {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-left: 130px;
+            margin-top: -0.4rem;
+            margin-bottom: 0.75rem;
+            padding-left: 0.85rem;
+        }
+
+        /* 요약 카드 */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.1rem;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .summary-card .label {
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-card .value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .summary-card.total .value { color: #1a1a2e; }
+        .summary-card.employer .value { color: #dc2626; }
+        .summary-card.employee .value { color: #2563eb; }
+
+        /* 수당 분류 카드 */
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.9rem;
+        }
+
+        .breakdown-row:last-child { border-bottom: none; }
+
+        .breakdown-row .br-label { color: #374151; }
+        .breakdown-row .br-value { font-weight: 600; }
+        .breakdown-row.br-total { border-top: 2px solid #e5e7eb; font-weight: 700; padding-top: 0.8rem; }
+
+        .tax-tag {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            margin-left: 0.3rem;
+        }
+
+        .tax-tag.tax { background: #fef2f2; color: #dc2626; }
+        .tax-tag.nontax { background: #f0fdf4; color: #16a34a; }
+
+        /* 테이블 */
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .detail-card h3 {
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            padding: 0.65rem 1.5rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-align: right;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        thead th:first-child { text-align: left; }
+
+        tbody td {
+            padding: 0.8rem 1.5rem;
+            font-size: 0.92rem;
+            text-align: right;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        tbody td:first-child {
+            text-align: left;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        tbody tr:last-child td { border-bottom: none; }
+
+        tbody tr.total-row {
+            background: #f0f4ff;
+            font-weight: 700;
+        }
+
+        tbody tr.total-row td {
+            border-top: 2px solid #2563eb;
+            padding-top: 0.9rem;
+            padding-bottom: 0.9rem;
+        }
+
+        .employer-val { color: #dc2626; }
+        .employee-val { color: #2563eb; }
+
+        /* 실수령액 */
+        .net-pay-card {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .net-pay-card .label { font-size: 0.9rem; opacity: 0.85; }
+        .net-pay-card .value { font-size: 2rem; font-weight: 700; margin-top: 0.3rem; }
+        .net-pay-card .sub { font-size: 0.8rem; opacity: 0.7; margin-top: 0.3rem; }
+
+        .error-msg {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-msg.visible { display: block; }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .result-area { display: none; }
+        .result-area.visible { display: block; }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        @media (max-width: 600px) {
+            .summary-cards { grid-template-columns: 1fr; }
+            .field { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+            .field label { width: auto; }
+            .field-hint { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>급여 자동정산 서비스</h1>
+    <p>2025년 4대 보험 요율 기준</p>
+</header>
+<nav>
+    <a href="/" class="active">급여 계산기</a>
+    <a href="/employees">직원 관리</a>
+    <a href="/settings">설정</a>
+</nav>
+
+<div class="container">
+    <!-- 사업장 규모 + 부양가족 -->
+    <div class="biz-size-card" style="flex-wrap:wrap;">
+        <h2>사업장 규모</h2>
+        <div class="biz-toggle">
+            <button id="bizOver5" class="active" onclick="setBizSize(true)">5인 이상</button>
+            <button id="bizUnder5" onclick="setBizSize(false)">5인 미만</button>
+        </div>
+        <span class="biz-size-hint" id="bizHint">연장·휴일·야간 가산수당 법적 의무</span>
+    </div>
+
+    <div class="biz-size-card">
+        <h2>부양가족 수</h2>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="number" id="dependents" value="1" min="1" max="20" style="width:70px; padding:0.5rem; font-size:1.1rem; font-weight:700; text-align:center; border:2px solid #e5e7eb; border-radius:8px; outline:none;">
+            <span style="font-size:0.85rem; color:#6b7280;">명 (본인 포함)</span>
+        </div>
+        <span class="biz-size-hint">소득세 계산 시 인적공제에 반영</span>
+    </div>
+
+    <!-- 기본급 입력 -->
+    <div class="card">
+        <h2>기본급</h2>
+
+        <!-- 입력 방식 선택 -->
+        <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+            <button class="wage-mode-btn active" id="modeMonthly" onclick="setWageMode('monthly')">월급 직접 입력</button>
+            <button class="wage-mode-btn" id="modeHourly" onclick="setWageMode('hourly')">시급 × 근무시간</button>
+        </div>
+
+        <!-- 모드1: 월급 직접 입력 -->
+        <div id="monthlyMode">
+            <div class="field">
+                <label>기본급</label>
+                <div class="input-wrapper">
+                    <input type="text" id="baseSalary" value="3,000,000" class="main-input" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="quick-btns">
+                <button onclick="setBase(2500000)">250만</button>
+                <button onclick="setBase(3000000)">300만</button>
+                <button onclick="setBase(3500000)">350만</button>
+                <button onclick="setBase(4000000)">400만</button>
+                <button onclick="setBase(5000000)">500만</button>
+                <button onclick="setBase(7000000)">700만</button>
+            </div>
+        </div>
+
+        <!-- 모드2: 시급 기반 계산 -->
+        <div id="hourlyMode" style="display:none;">
+            <div class="field">
+                <label>시급</label>
+                <div class="input-wrapper">
+                    <input type="text" id="hourlyRate" value="10,030" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="quick-btns" style="margin-bottom:0.8rem;">
+                <button onclick="setHourly(10030)">최저시급 (10,030)</button>
+            </div>
+            <div class="field">
+                <label>1일 근로시간</label>
+                <div class="input-wrapper" style="max-width:120px;">
+                    <input type="text" id="dailyHours" value="8" inputmode="decimal" autocomplete="off" style="text-align:center;">
+                    <span class="suffix">시간</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>주 근무일수</label>
+                <div class="input-wrapper" style="max-width:120px;">
+                    <input type="text" id="weeklyDays" value="5" inputmode="decimal" autocomplete="off" style="text-align:center;">
+                    <span class="suffix">일</span>
+                </div>
+            </div>
+
+            <!-- 자동 계산 결과 -->
+            <div id="hourlyCalcResult" style="background:#f0f4ff; border-radius:8px; padding:0.8rem 1rem; margin-top:0.8rem; font-size:0.85rem; color:#374151;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
+                    <span>주 소정근로시간</span>
+                    <strong id="calcWeeklyHours">-</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
+                    <span>주휴시간</span>
+                    <strong id="calcWeeklyHolidayHours">-</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
+                    <span>월 소정근로시간</span>
+                    <strong id="calcMonthlyHours">-</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding-top:0.5rem; border-top:2px solid #2563eb; font-size:1rem;">
+                    <span>월 기본급 (근로분)</span>
+                    <strong style="color:#2563eb;" id="calcBaseSalary">-</strong>
+                </div>
+            </div>
+            <div class="field-hint" style="margin-left:0; margin-top:0.5rem;">주휴수당은 수당 항목에서 자동 계산됩니다</div>
+
+            <!-- 숨은 기본급 (계산용) -->
+            <input type="hidden" id="baseSalaryHourly" value="0">
+        </div>
+    </div>
+
+    <!-- 수당 입력 -->
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <h2 style="margin-bottom:0">수당 항목</h2>
+            <button class="toggle-btn" id="toggleAllowance" onclick="toggleAllowance()">+ 수당 입력 펼치기</button>
+        </div>
+
+        <div class="allowance-section" id="allowanceSection">
+            <!-- 법정 수당 자동 계산 -->
+            <p style="font-size:0.82rem; color:#6b7280; margin: 0.8rem 0 0.6rem; font-weight:600;">
+                법정 의무 수당 <span style="font-weight:400;">(기본급 기준 자동 계산)</span>
+            </p>
+
+            <div class="auto-calc-info" id="autoCalcInfo" style="background:#f0f4ff; border-radius:8px; padding:0.8rem 1rem; margin-bottom:1rem; font-size:0.82rem; color:#374151; display:none;">
+                통상시급: <strong id="hourlyWage">-</strong>원 (기본급 ÷ 209시간)
+            </div>
+
+            <!-- 주휴수당 (자동) -->
+            <div class="field">
+                <label>주휴수당 <span class="badge badge-tax">과세</span><span class="badge-mandatory">자동</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="weeklyHoliday" value="0" readonly style="background:#f0f4ff; color:#2563eb;">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="field-hint" id="hintWeeklyHoliday">시급제: 시급 × 주휴시간 × 4.345주 / 월급제: 기본급에 포함 (0원)</div>
+
+            <!-- 연장근로 (시간 입력) -->
+            <div class="field" id="fieldOvertime">
+                <label>연장근로 <span class="badge badge-tax">과세</span><span class="badge-mandatory" id="badgeOvertime">법정</span></label>
+                <div style="flex:1; display:flex; gap:0.5rem; align-items:center;">
+                    <div class="input-wrapper" style="width:100px; flex:none;">
+                        <input type="text" id="overtimeHours" value="0" inputmode="numeric" autocomplete="off" style="text-align:center;">
+                        <span class="suffix">시간</span>
+                    </div>
+                    <span style="color:#6b7280; font-size:0.8rem;">×1.5 =</span>
+                    <div class="input-wrapper" style="flex:1;">
+                        <input type="text" id="overtime" value="0" readonly style="background:#f0f4ff; color:#2563eb;">
+                        <span class="suffix">원</span>
+                    </div>
+                </div>
+            </div>
+            <div class="field-hint" id="hintOvertime">월 연장근로 시간 입력 → 시급 × 1.5 × 시간 자동 계산 (5인 이상)</div>
+
+            <!-- 휴일근로 (시간 입력) -->
+            <div class="field" id="fieldHolidayWork">
+                <label>휴일근로 <span class="badge badge-tax">과세</span><span class="badge-mandatory" id="badgeHolidayWork">법정</span></label>
+                <div style="flex:1; display:flex; gap:0.5rem; align-items:center;">
+                    <div class="input-wrapper" style="width:100px; flex:none;">
+                        <input type="text" id="holidayWorkHours" value="0" inputmode="numeric" autocomplete="off" style="text-align:center;">
+                        <span class="suffix">시간</span>
+                    </div>
+                    <span style="color:#6b7280; font-size:0.8rem;">×1.5 =</span>
+                    <div class="input-wrapper" style="flex:1;">
+                        <input type="text" id="holidayWork" value="0" readonly style="background:#f0f4ff; color:#2563eb;">
+                        <span class="suffix">원</span>
+                    </div>
+                </div>
+            </div>
+            <div class="field-hint" id="hintHolidayWork">월 휴일근로 시간 입력 → 시급 × 1.5 × 시간 자동 계산 (5인 이상)</div>
+
+            <!-- 야간근로 (시간 입력) -->
+            <div class="field" id="fieldNightWork">
+                <label>야간근로 <span class="badge badge-tax">과세</span><span class="badge-mandatory" id="badgeNightWork">법정</span></label>
+                <div style="flex:1; display:flex; gap:0.5rem; align-items:center;">
+                    <div class="input-wrapper" style="width:100px; flex:none;">
+                        <input type="text" id="nightWorkHours" value="0" inputmode="numeric" autocomplete="off" style="text-align:center;">
+                        <span class="suffix">시간</span>
+                    </div>
+                    <span style="color:#6b7280; font-size:0.8rem;">×0.5 =</span>
+                    <div class="input-wrapper" style="flex:1;">
+                        <input type="text" id="nightWork" value="0" readonly style="background:#f0f4ff; color:#2563eb;">
+                        <span class="suffix">원</span>
+                    </div>
+                </div>
+            </div>
+            <div class="field-hint" id="hintNightWork">월 야간근로(22시~06시) 시간 입력 → 시급 × 0.5 × 시간 자동 계산 (5인 이상)</div>
+
+            <p style="font-size:0.82rem; color:#6b7280; margin: 1.2rem 0 0.6rem; font-weight:600;">
+                선택 수당 <span style="font-weight:400;">(회사 재량)</span>
+            </p>
+
+            <div class="field">
+                <label>월차수당 <span class="badge badge-tax">과세</span><span class="badge-optional">선택</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="monthlyLeave" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="field-hint">현행법에 월차 제도 없음 (2003년 폐지). 회사 자체 지급 시만 해당</div>
+
+            <div class="field">
+                <label>직책수당 <span class="badge badge-tax">과세</span><span class="badge-optional">선택</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="position" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>상여금 <span class="badge badge-tax">과세</span><span class="badge-optional">선택</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="bonus" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>가족수당 <span class="badge badge-tax">과세</span><span class="badge-optional">선택</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="family" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>근속수당 <span class="badge badge-tax">과세</span><span class="badge-optional">선택</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="tenure" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>기타 과세 <span class="badge badge-tax">과세</span><span class="badge-optional">선택</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="otherTaxable" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top:0.5rem; margin-bottom:0.75rem;">
+                <div style="padding:0.6rem 0.85rem; font-size:0.8rem; color:#2563eb; font-weight:500;">기타 과세 수당 항목 안내</div>
+                <div class="info-content">
+                    <table>
+                        <thead><tr><th>수당</th><th>설명</th></tr></thead>
+                        <tbody>
+                            <tr><td>기술수당</td><td>전문 기술·자격 보유자 수당</td></tr>
+                            <tr><td>교통비 (과세)</td><td>비과세 한도 초과분 또는 일반 교통비</td></tr>
+                            <tr><td>성과급</td><td>실적 기반 인센티브</td></tr>
+                            <tr><td>특근수당</td><td>특별 근무에 대한 수당</td></tr>
+                            <tr><td>자격수당</td><td>자격증 보유에 따른 수당</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 비과세 수당 -->
+            <p style="font-size:0.82rem; color:#6b7280; margin: 1rem 0 0.6rem; font-weight:600;">비과세 수당 (한도 초과분은 과세 처리)</p>
+
+            <div class="field">
+                <label>식대 <span class="badge badge-nontax">비과세</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="meal" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="field-hint">월 20만원까지 비과세, 초과분은 과세</div>
+
+            <div class="field">
+                <label>유류대 <span class="badge badge-nontax">비과세</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="fuel" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="field-hint">월 20만원까지 비과세, 초과분은 과세</div>
+
+            <div class="field">
+                <label>육아수당 <span class="badge badge-nontax">비과세</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="childcare" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+            <div class="field-hint">월 10만원까지 비과세, 초과분은 과세</div>
+
+            <div class="field">
+                <label>기타 비과세 <span class="badge badge-nontax">비과세</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="otherNontaxable" value="0" inputmode="numeric" autocomplete="off">
+                    <span class="suffix">원</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top:0.5rem; margin-bottom:0.75rem;">
+                <div style="padding:0.6rem 0.85rem; font-size:0.8rem; color:#16a34a; font-weight:500;">기타 비과세 수당 항목 안내</div>
+                <div class="info-content">
+                    <table>
+                        <thead><tr><th>수당</th><th>비과세 조건</th></tr></thead>
+                        <tbody>
+                            <tr><td>일직·숙직료</td><td>실비 변상 성격</td></tr>
+                            <tr><td>출장비/여비</td><td>실비 변상 (실제 지출 기준)</td></tr>
+                            <tr><td>작업복·피복비</td><td>현물 또는 실비</td></tr>
+                            <tr><td>연구활동비</td><td>월 20만원 이하 (연구직)</td></tr>
+                            <tr><td>생산직 야간근로수당</td><td>월급 240만원 이하, 연 240만원 한도</td></tr>
+                            <tr><td>국외근로수당</td><td>월 100만~300만원 (지역별 상이)</td></tr>
+                            <tr><td>벽지수당</td><td>벽지 근무자</td></tr>
+                            <tr><td>위험수당</td><td>위험직종 종사자</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top:0.5rem; color:#9ca3af; font-size:0.75rem;">※ 해당 항목의 비과세 한도를 확인 후, 비과세 해당 금액만 입력하세요.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 계산 버튼 -->
+    <div class="btn-row">
+        <button class="btn btn-outline" onclick="resetForm()">초기화</button>
+        <button class="btn" id="calcBtn" onclick="calculate()">계산하기</button>
+    </div>
+
+    <!-- 에러 -->
+    <div class="error-msg" id="errorMsg" style="margin-top:1rem;"></div>
+
+    <!-- 결과 -->
+    <div class="result-area" id="resultArea">
+        <!-- 요약 카드 -->
+        <div class="summary-cards" style="margin-top:1.2rem;">
+            <div class="summary-card total">
+                <div class="label">총 지급액</div>
+                <div class="value" id="sumTotal">-</div>
+            </div>
+            <div class="summary-card employer">
+                <div class="label">사업주 부담 합계</div>
+                <div class="value" id="sumEmployer">-</div>
+            </div>
+            <div class="summary-card employee">
+                <div class="label">근로자 공제 합계</div>
+                <div class="value" id="sumEmployee">-</div>
+            </div>
+        </div>
+
+        <!-- 수당 분류 -->
+        <div class="card" id="allowanceBreakdown" style="display:none;">
+            <h2>수당 과세/비과세 분류</h2>
+            <div id="allowanceBreakdownBody"></div>
+        </div>
+
+        <!-- 보험료 상세 -->
+        <div class="detail-card">
+            <h3>4대 보험 상세 내역 (과세 소득 <span id="taxableLabel">-</span> 기준)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>사업주 부담</th>
+                        <th>근로자 부담</th>
+                    </tr>
+                </thead>
+                <tbody id="detailBody"></tbody>
+            </table>
+        </div>
+
+        <!-- 세금 -->
+        <div class="card" style="margin-top:1.2rem;">
+            <h2>소득세·주민세 (부양가족 <span id="taxDependents">1</span>명 기준)</h2>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid #f3f4f6;">
+                <span style="color:#374151;">소득세</span>
+                <strong id="incomeTax">-</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid #f3f4f6;">
+                <span style="color:#374151;">주민세 (소득세의 10%)</span>
+                <strong id="residentTax">-</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.7rem 0; font-size:1.05rem;">
+                <strong>세금 합계</strong>
+                <strong style="color:#dc2626;" id="totalTax">-</strong>
+            </div>
+        </div>
+
+        <!-- 총 공제 요약 -->
+        <div class="card" style="margin-top:1.2rem; background:#f8fafc;">
+            <div style="display:flex; justify-content:space-between; padding:0.4rem 0; font-size:0.9rem;">
+                <span>4대 보험 (근로자)</span>
+                <span id="summaryInsurance">-</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.4rem 0; font-size:0.9rem;">
+                <span>소득세 + 주민세</span>
+                <span id="summaryTax">-</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.6rem 0; border-top:2px solid #1a1a2e; font-size:1.05rem; font-weight:700;">
+                <span>총 공제액</span>
+                <span style="color:#dc2626;" id="totalDeduction">-</span>
+            </div>
+        </div>
+
+        <!-- 실수령액 -->
+        <div class="net-pay-card">
+            <div class="label">예상 실수령액 (4대 보험 + 소득세/주민세 공제 후)</div>
+            <div class="value" id="netPay">-</div>
+            <div class="sub">* 간이세액표 기준 추정치</div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    급여 자동정산 서비스 v0.3.0 · 2025년 4대 보험 요율 적용
+</footer>
+
+<script>
+    // ── 요소 참조 ────────────────────────────────────────
+    const inputs = {
+        baseSalary: document.getElementById('baseSalary'),
+        weeklyHoliday: document.getElementById('weeklyHoliday'),
+        monthlyLeave: document.getElementById('monthlyLeave'),
+        overtime: document.getElementById('overtime'),
+        holidayWork: document.getElementById('holidayWork'),
+        nightWork: document.getElementById('nightWork'),
+        position: document.getElementById('position'),
+        bonus: document.getElementById('bonus'),
+        family: document.getElementById('family'),
+        tenure: document.getElementById('tenure'),
+        otherTaxable: document.getElementById('otherTaxable'),
+        meal: document.getElementById('meal'),
+        fuel: document.getElementById('fuel'),
+        childcare: document.getElementById('childcare'),
+        otherNontaxable: document.getElementById('otherNontaxable'),
+    };
+    const calcBtn = document.getElementById('calcBtn');
+    const resultArea = document.getElementById('resultArea');
+    const errorMsg = document.getElementById('errorMsg');
+
+    // 시간 입력 요소
+    const hourInputs = {
+        overtimeHours: document.getElementById('overtimeHours'),
+        holidayWorkHours: document.getElementById('holidayWorkHours'),
+        nightWorkHours: document.getElementById('nightWorkHours'),
+    };
+
+    // 시급 모드 요소
+    const hourlyInputs = {
+        hourlyRate: document.getElementById('hourlyRate'),
+        dailyHours: document.getElementById('dailyHours'),
+        weeklyDays: document.getElementById('weeklyDays'),
+    };
+
+    let wageMode = 'monthly'; // 'monthly' or 'hourly'
+
+    function setWageMode(mode) {
+        wageMode = mode;
+        document.getElementById('modeMonthly').classList.toggle('active', mode === 'monthly');
+        document.getElementById('modeHourly').classList.toggle('active', mode === 'hourly');
+        document.getElementById('monthlyMode').style.display = mode === 'monthly' ? 'block' : 'none';
+        document.getElementById('hourlyMode').style.display = mode === 'hourly' ? 'block' : 'none';
+
+        if (mode === 'hourly') {
+            calcHourlySalary();
+        }
+        calcLegalAllowances();
+    }
+
+    function setHourly(rate) {
+        hourlyInputs.hourlyRate.value = fmt(rate);
+        calcHourlySalary();
+    }
+
+    function calcHourlySalary() {
+        const rateRaw = hourlyInputs.hourlyRate.value.replace(/[^0-9]/g, '');
+        const rate = rateRaw ? Number(rateRaw) : 0;
+        const dailyH = parseFloat(hourlyInputs.dailyHours.value) || 0;
+        const weeklyD = parseFloat(hourlyInputs.weeklyDays.value) || 0;
+
+        const weeklyHours = dailyH * weeklyD;
+        const weeklyHolidayH = weeklyHours >= 15 ? (weeklyHours / 40) * 8 : 0;
+        const monthlyHours = (weeklyHours + weeklyHolidayH) * 4.345;
+        const baseSalary = Math.round(rate * weeklyHours * 4.345); // 근로분만
+
+        document.getElementById('calcWeeklyHours').textContent = weeklyHours.toFixed(1) + '시간';
+        document.getElementById('calcWeeklyHolidayHours').textContent =
+            weeklyHours >= 15 ? weeklyHolidayH.toFixed(1) + '시간' : '0시간 (주 15시간 미만)';
+        document.getElementById('calcMonthlyHours').textContent = monthlyHours.toFixed(1) + '시간';
+        document.getElementById('calcBaseSalary').textContent = fmt(baseSalary) + '원';
+
+        // 숨은 필드에 저장
+        document.getElementById('baseSalaryHourly').value = baseSalary;
+        // 메인 기본급 동기화
+        inputs.baseSalary.value = fmt(baseSalary);
+
+        calcLegalAllowances();
+    }
+
+    // 시급 모드 입력 이벤트
+    hourlyInputs.hourlyRate.addEventListener('input', function () {
+        const raw = this.value.replace(/[^0-9]/g, '');
+        this.value = raw ? Number(raw).toLocaleString('ko-KR') : '';
+        calcHourlySalary();
+    });
+    hourlyInputs.dailyHours.addEventListener('input', calcHourlySalary);
+    hourlyInputs.weeklyDays.addEventListener('input', calcHourlySalary);
+
+    // ── 현재 기본급 가져오기 (모드에 따라) ───────────────
+    function getCurrentBaseSalary() {
+        if (wageMode === 'hourly') {
+            return Number(document.getElementById('baseSalaryHourly').value) || 0;
+        }
+        return getVal(inputs.baseSalary);
+    }
+
+    // ── 통상시급 계산 (파트타임 대응) ────────────────────
+    function getHourlyWageInfo() {
+        const baseSalary = getCurrentBaseSalary();
+
+        if (wageMode === 'hourly') {
+            const rateRaw = hourlyInputs.hourlyRate.value.replace(/[^0-9]/g, '');
+            const rate = rateRaw ? Number(rateRaw) : 0;
+            const dailyH = parseFloat(hourlyInputs.dailyHours.value) || 0;
+            const weeklyD = parseFloat(hourlyInputs.weeklyDays.value) || 0;
+            const weeklyHours = dailyH * weeklyD;
+            const weeklyHolidayH = weeklyHours >= 15 ? (weeklyHours / 40) * 8 : 0;
+            return { hourlyWage: rate, weeklyHolidayH, baseSalary };
+        }
+
+        // 풀타임: 시급 = 기본급 / 209
+        const hourlyWage = baseSalary > 0 ? Math.round(baseSalary / 209) : 0;
+        return { hourlyWage, weeklyHolidayH: 8, baseSalary };
+    }
+
+    // ── 법정 수당 자동 계산 ──────────────────────────────
+    function calcLegalAllowances() {
+        const { hourlyWage, weeklyHolidayH, baseSalary } = getHourlyWageInfo();
+
+        // 통상시급 표시
+        const infoEl = document.getElementById('autoCalcInfo');
+        if (baseSalary > 0) {
+            infoEl.style.display = 'block';
+            if (wageMode === 'monthly') {
+                document.getElementById('hourlyWage').textContent = fmt(hourlyWage) + ' (기본급 ÷ 209시간, 주휴 포함)';
+            } else {
+                document.getElementById('hourlyWage').textContent = fmt(hourlyWage);
+            }
+        } else {
+            infoEl.style.display = 'none';
+        }
+
+        // 주휴수당: 월급제 → 0 (이미 포함), 시급제 → 자동 계산
+        let weeklyHolidayAmt = 0;
+        if (wageMode === 'hourly' && baseSalary > 0) {
+            weeklyHolidayAmt = Math.round(hourlyWage * weeklyHolidayH * 4.345);
+        }
+        inputs.weeklyHoliday.value = fmt(weeklyHolidayAmt);
+
+        // 연장근로 = 시급 × 1.5 × 시간
+        const otHours = getHourVal(hourInputs.overtimeHours);
+        const overtimeAmt = Math.round(hourlyWage * 1.5 * otHours);
+        inputs.overtime.value = fmt(overtimeAmt);
+
+        // 휴일근로 = 시급 × 1.5 × 시간
+        const hdHours = getHourVal(hourInputs.holidayWorkHours);
+        const holidayWorkAmt = Math.round(hourlyWage * 1.5 * hdHours);
+        inputs.holidayWork.value = fmt(holidayWorkAmt);
+
+        // 야간근로 = 시급 × 0.5 × 시간
+        const ntHours = getHourVal(hourInputs.nightWorkHours);
+        const nightWorkAmt = Math.round(hourlyWage * 0.5 * ntHours);
+        inputs.nightWork.value = fmt(nightWorkAmt);
+    }
+
+    function getHourVal(input) {
+        const raw = input.value.replace(/[^0-9.]/g, '');
+        return raw ? parseFloat(raw) : 0;
+    }
+
+    // ── 사업장 규모 ──────────────────────────────────────
+    let isOver5 = true;
+
+    function setBizSize(over5) {
+        isOver5 = over5;
+        document.getElementById('bizOver5').classList.toggle('active', over5);
+        document.getElementById('bizUnder5').classList.toggle('active', !over5);
+
+        const surchargeIds = ['Overtime', 'HolidayWork', 'NightWork'];
+        const hourKeys = ['overtimeHours', 'holidayWorkHours', 'nightWorkHours'];
+
+        for (let i = 0; i < surchargeIds.length; i++) {
+            const fieldEl = document.getElementById('field' + surchargeIds[i]);
+            const badgeEl = document.getElementById('badge' + surchargeIds[i]);
+            const hintEl = document.getElementById('hint' + surchargeIds[i]);
+            const hourInput = hourInputs[hourKeys[i]];
+
+            if (over5) {
+                badgeEl.textContent = '법정';
+                badgeEl.className = 'badge-mandatory';
+                fieldEl.classList.remove('field-disabled');
+                hourInput.disabled = false;
+                hintEl.style.color = '';
+            } else {
+                badgeEl.textContent = '해당없음';
+                badgeEl.className = 'badge-na';
+                fieldEl.classList.add('field-disabled');
+                hourInput.disabled = true;
+                hourInput.value = '0';
+                hintEl.style.color = '#d1d5db';
+            }
+        }
+
+        document.getElementById('bizHint').textContent = over5
+            ? '연장·휴일·야간 가산수당 법적 의무'
+            : '가산수당 법적 의무 없음 (주휴수당만 의무)';
+
+        calcLegalAllowances();
+    }
+
+    // ── 유틸 ─────────────────────────────────────────────
+    function fmt(n) { return n.toLocaleString('ko-KR'); }
+
+    function getVal(input) {
+        const raw = input.value.replace(/[^0-9]/g, '');
+        return raw ? Number(raw) : 0;
+    }
+
+    // 입력 시 자동 콤마 (readonly 제외)
+    Object.values(inputs).forEach(input => {
+        if (input.readOnly) return;
+        input.addEventListener('input', function () {
+            const raw = this.value.replace(/[^0-9]/g, '');
+            if (raw) {
+                this.value = Number(raw).toLocaleString('ko-KR');
+            } else {
+                this.value = '';
+            }
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') calculate();
+        });
+    });
+
+    // 기본급 변경 시 법정 수당 자동 재계산
+    inputs.baseSalary.addEventListener('input', function () {
+        // 콤마 포맷 후 재계산
+        setTimeout(calcLegalAllowances, 0);
+    });
+
+    // 시간 입력 시 자동 재계산
+    Object.values(hourInputs).forEach(input => {
+        input.addEventListener('input', calcLegalAllowances);
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') calculate();
+        });
+    });
+
+    // ── 수당 토글 ────────────────────────────────────────
+    let allowanceOpen = false;
+    function toggleAllowance() {
+        allowanceOpen = !allowanceOpen;
+        document.getElementById('allowanceSection').classList.toggle('open', allowanceOpen);
+        document.getElementById('toggleAllowance').textContent = allowanceOpen
+            ? '- 수당 입력 접기'
+            : '+ 수당 입력 펼치기';
+    }
+
+    // ── 빠른 입력 ────────────────────────────────────────
+    function setBase(amount) {
+        inputs.baseSalary.value = fmt(amount);
+        calcLegalAllowances();
+    }
+
+    // ── 초기화 ───────────────────────────────────────────
+    function resetForm() {
+        setWageMode('monthly');
+        inputs.baseSalary.value = '3,000,000';
+        hourlyInputs.hourlyRate.value = '10,030';
+        hourlyInputs.dailyHours.value = '8';
+        hourlyInputs.weeklyDays.value = '5';
+        Object.keys(inputs).filter(k => k !== 'baseSalary').forEach(k => {
+            if (!inputs[k].readOnly) inputs[k].value = '0';
+        });
+        Object.values(hourInputs).forEach(h => { h.value = '0'; });
+        calcLegalAllowances();
+        resultArea.classList.remove('visible');
+        hideError();
+    }
+
+    // ── 계산 ─────────────────────────────────────────────
+    async function calculate() {
+        const baseSalary = getCurrentBaseSalary();
+
+        if (baseSalary <= 0) {
+            showError('기본급을 입력해 주세요.');
+            resultArea.classList.remove('visible');
+            return;
+        }
+
+        hideError();
+        calcBtn.disabled = true;
+        calcBtn.innerHTML = '<span class="spinner"></span>';
+
+        const body = {
+            base_salary: baseSalary,
+            dependents: Number(document.getElementById('dependents').value) || 1,
+            allowances: {
+                weekly_holiday: getVal(inputs.weeklyHoliday),
+                monthly_leave: getVal(inputs.monthlyLeave),
+                overtime: getVal(inputs.overtime),
+                holiday_work: getVal(inputs.holidayWork),
+                night_work: getVal(inputs.nightWork),
+                position: getVal(inputs.position),
+                bonus: getVal(inputs.bonus),
+                family: getVal(inputs.family),
+                tenure: getVal(inputs.tenure),
+                other_taxable: getVal(inputs.otherTaxable),
+                meal: getVal(inputs.meal),
+                fuel: getVal(inputs.fuel),
+                childcare: getVal(inputs.childcare),
+                other_nontaxable: getVal(inputs.otherNontaxable),
+            }
+        };
+
+        try {
+            const url = window.location.origin + '/api/payroll/calculate';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                let msg = '계산 중 오류가 발생했습니다. (HTTP ' + res.status + ')';
+                try {
+                    const err = await res.json();
+                    if (err.detail) msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+                } catch (_) {}
+                throw new Error(msg);
+            }
+
+            const data = await res.json();
+            renderResult(data);
+        } catch (e) {
+            showError(e.message || '서버 연결에 실패했습니다.');
+            resultArea.classList.remove('visible');
+        } finally {
+            calcBtn.disabled = false;
+            calcBtn.textContent = '계산하기';
+        }
+    }
+
+    function showError(msg) {
+        errorMsg.textContent = msg;
+        errorMsg.classList.add('visible');
+    }
+
+    function hideError() {
+        errorMsg.classList.remove('visible');
+    }
+
+    // ── 결과 렌더링 ──────────────────────────────────────
+    function renderResult(d) {
+        // 요약
+        document.getElementById('sumTotal').textContent = fmt(d.total_pay) + '원';
+        document.getElementById('sumEmployer').textContent = fmt(d.total_employer) + '원';
+        document.getElementById('sumEmployee').textContent = fmt(d.total_employee) + '원';
+
+        // 수당 분류 (수당이 있는 경우만)
+        const a = d.allowances;
+        const hasAllowance = a.total_taxable > 0 || a.total_nontaxable > 0;
+        const abCard = document.getElementById('allowanceBreakdown');
+
+        if (hasAllowance) {
+            abCard.style.display = 'block';
+            let html = '';
+
+            const taxItems = [
+                ['주휴수당', a.weekly_holiday],
+                ['월차수당', a.monthly_leave],
+                ['연장근로수당', a.overtime],
+                ['휴일근로수당', a.holiday_work],
+                ['야간근로수당', a.night_work],
+                ['직책수당', a.position],
+                ['상여금', a.bonus],
+                ['가족수당', a.family],
+                ['근속수당', a.tenure],
+                ['기타 과세', a.other_taxable],
+                ['식대 (과세분)', a.meal_taxable],
+                ['유류대 (과세분)', a.fuel_taxable],
+                ['육아수당 (과세분)', a.childcare_taxable],
+            ];
+            for (const [name, val] of taxItems) {
+                if (val > 0) html += brRow(name, val, 'tax');
+            }
+
+            const nontaxItems = [
+                ['식대 (비과세분)', a.meal_nontaxable],
+                ['유류대 (비과세분)', a.fuel_nontaxable],
+                ['육아수당 (비과세분)', a.childcare_nontaxable],
+                ['기타 비과세', a.other_nontaxable],
+            ];
+            for (const [name, val] of nontaxItems) {
+                if (val > 0) html += brRow(name, val, 'nontax');
+            }
+
+            html += `<div class="breakdown-row br-total">
+                <span class="br-label">과세 수당 합계</span>
+                <span class="br-value" style="color:#dc2626">${fmt(a.total_taxable)}원</span>
+            </div>`;
+            html += `<div class="breakdown-row" style="font-weight:700">
+                <span class="br-label">비과세 수당 합계</span>
+                <span class="br-value" style="color:#16a34a">${fmt(a.total_nontaxable)}원</span>
+            </div>`;
+
+            document.getElementById('allowanceBreakdownBody').innerHTML = html;
+        } else {
+            abCard.style.display = 'none';
+        }
+
+        // 과세 소득 라벨
+        document.getElementById('taxableLabel').textContent = fmt(d.taxable_income) + '원';
+
+        // 보험료 테이블
+        const rows = [
+            ['국민연금', d.national_pension],
+            ['건강보험', d.health_insurance],
+            ['장기요양보험', d.long_term_care],
+            ['고용보험', d.employment_insurance],
+            ['산재보험', d.industrial_accident],
+        ];
+
+        let thtml = '';
+        for (const [name, item] of rows) {
+            thtml += `<tr>
+                <td>${name}</td>
+                <td class="employer-val">${fmt(item.employer)}원</td>
+                <td class="employee-val">${item.employee === 0 ? '-' : fmt(item.employee) + '원'}</td>
+            </tr>`;
+        }
+
+        thtml += `<tr>
+            <td>퇴직충당금</td>
+            <td class="employer-val">${fmt(d.retirement_provision)}원</td>
+            <td>-</td>
+        </tr>`;
+
+        thtml += `<tr class="total-row">
+            <td>합계</td>
+            <td class="employer-val">${fmt(d.total_employer)}원</td>
+            <td class="employee-val">${fmt(d.total_employee)}원</td>
+        </tr>`;
+
+        document.getElementById('detailBody').innerHTML = thtml;
+
+        // 세금
+        document.getElementById('taxDependents').textContent = d.dependents;
+        document.getElementById('incomeTax').textContent = fmt(d.tax.income_tax) + '원';
+        document.getElementById('residentTax').textContent = fmt(d.tax.resident_tax) + '원';
+        document.getElementById('totalTax').textContent = fmt(d.tax.total_tax) + '원';
+
+        // 총 공제 요약
+        document.getElementById('summaryInsurance').textContent = fmt(d.total_employee) + '원';
+        document.getElementById('summaryTax').textContent = fmt(d.tax.total_tax) + '원';
+        document.getElementById('totalDeduction').textContent = fmt(d.total_deduction) + '원';
+
+        // 실수령액
+        document.getElementById('netPay').textContent = fmt(d.net_pay) + '원';
+
+        resultArea.classList.add('visible');
+    }
+
+    function brRow(label, value, type) {
+        const tag = type === 'tax'
+            ? '<span class="tax-tag tax">과세</span>'
+            : '<span class="tax-tag nontax">비과세</span>';
+        return `<div class="breakdown-row">
+            <span class="br-label">${label} ${tag}</span>
+            <span class="br-value">${fmt(value)}원</span>
+        </div>`;
+    }
+
+    // 페이지 로드 시 초기 계산
+    calcLegalAllowances();
+</script>
+
+</body>
+</html>
