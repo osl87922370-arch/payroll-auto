@@ -515,8 +515,15 @@
 
     // ── 설정 로드 ──────────────────────────────────────
     async function loadSettings() {
-        const res = await fetch(API + '/api/settings/');
-        const s = await res.json();
+        let s;
+        try {
+            const res = await fetch(API + '/api/settings/');
+            if (!res.ok) throw new Error();
+            s = await res.json();
+        } catch (e) {
+            showToast('설정을 불러올 수 없습니다.');
+            return;
+        }
 
         document.getElementById('applyYear').value = s.apply_year;
         document.getElementById('minimumWage').value = fmt(s.minimum_wage);

@@ -234,6 +234,13 @@
 
     function fmt(n) { return n.toLocaleString('ko-KR'); }
 
+    function esc(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
     function getEmployeeId() {
         const path = window.location.pathname;
         const parts = path.split('/');
@@ -257,12 +264,12 @@
             }
 
             const d = await res.json();
-            document.title = `급여 명세서 - ${d.employee_name}`;
+            document.title = `급여 명세서 - ${d.employee_name || ''}`;
             renderStatement(container, d);
         } catch (e) {
             container.innerHTML = `<div class="error">
                 <p style="font-size:1.2rem; font-weight:700; margin-bottom:0.5rem;">오류</p>
-                <p>${e.message}</p>
+                <p>${esc(e.message)}</p>
                 <p style="margin-top:1rem;"><a href="/employees">직원 관리로 돌아가기</a></p>
             </div>`;
         }
@@ -316,8 +323,8 @@
                 <h1>급 여 명 세 서</h1>
                 <div class="stmt-period">${getCurrentMonth()}</div>
                 <div class="stmt-employee">
-                    <div>성명: <span>${d.employee_name || '___________'}</span></div>
-                    <div>직책: <span>${d.employee_role}</span></div>
+                    <div>성명: <span>${esc(d.employee_name) || '___________'}</span></div>
+                    <div>직책: <span>${esc(d.employee_role)}</span></div>
                 </div>
             </div>
 

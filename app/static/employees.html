@@ -704,6 +704,13 @@
 
     function fmt(n) { return n.toLocaleString('ko-KR'); }
 
+    function esc(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
     function showToast(msg) {
         const t = document.getElementById('toast');
         t.textContent = msg;
@@ -713,9 +720,14 @@
 
     // ── 직원 목록 로드 ────────────────────────────────
     async function loadEmployees() {
-        const res = await fetch(API + '/api/employees/');
-        const employees = await res.json();
-        renderEmployeeGrid(employees);
+        try {
+            const res = await fetch(API + '/api/employees/');
+            if (!res.ok) throw new Error('직원 목록을 불러올 수 없습니다.');
+            const employees = await res.json();
+            renderEmployeeGrid(employees);
+        } catch (e) {
+            showToast(e.message || '서버 연결에 실패했습니다.');
+        }
     }
 
     function renderEmployeeGrid(employees) {
@@ -725,7 +737,8 @@
             const hasSalary = emp.base_salary > 0;
             const hasName = emp.name && emp.name.trim();
             const hasRole = emp.role && emp.role.trim();
-            const cardTitle = hasName ? emp.name : `직원 ${idx + 1}`;
+            const cardTitle = hasName ? esc(emp.name) : `직원 ${idx + 1}`;
+            const safeRole = esc(emp.role);
             const titleClass = hasName ? '' : 'emp-name-empty';
 
             // 근무 형태 판별
@@ -747,19 +760,19 @@
             return `<div class="emp-card">
                 <div class="emp-header">
                     <span class="emp-name ${titleClass}">${cardTitle}</span>
-                    ${hasRole ? `<span class="emp-role">${emp.role}</span>` : ''}
+                    ${hasRole ? `<span class="emp-role">${safeRole}</span>` : ''}
                 </div>
                 <div class="emp-info">
-                    성명: <strong>${hasName ? emp.name : '미입력'}</strong> · 직책: <strong>${hasRole ? emp.role : '미입력'}</strong>
+                    성명: <strong>${hasName ? cardTitle : '미입력'}</strong> · 직책: <strong>${hasRole ? safeRole : '미입력'}</strong>
                     ${workTypeHtml}
                 </div>
                 <div class="emp-salary">
                     기본급: <strong>${hasSalary ? fmt(emp.base_salary) + '원' : '미설정'}</strong>
                 </div>
                 <div class="emp-actions">
-                    <button class="btn-edit" onclick="openModal('${emp.id}')">설정</button>
-                    <button class="btn-statement" ${hasSalary ? '' : 'disabled'} onclick="viewStatement('${emp.id}')">명세서</button>
-                    <button class="btn-delete" onclick="deleteEmployee('${emp.id}', '${cardTitle}')" title="삭제">✕</button>
+                    <button class="btn-edit" onclick="openModal('${esc(emp.id)}')">설정</button>
+                    <button class="btn-statement" ${hasSalary ? '' : 'disabled'} onclick="viewStatement('${esc(emp.id)}')">명세서</button>
+                    <button class="btn-delete" onclick="deleteEmployee('${esc(emp.id)}', '${cardTitle.replace(/'/g, "\\&#39;")}')" title="삭제">✕</button>
                 </div>
             </div>`;
         }).join('');
@@ -981,8 +994,15 @@
 
     async function openModal(empId) {
         currentEmployeeId = empId;
-        const res = await fetch(API + '/api/employees/' + empId);
-        const emp = await res.json();
+        let emp;
+        try {
+            const res = await fetch(API + '/api/employees/' + empId);
+            if (!res.ok) throw new Error('직원 정보를 불러올 수 없습니다.');
+            emp = await res.json();
+        } catch (e) {
+            showToast(e.message || '서버 연결에 실패했습니다.');
+            return;
+        }
 
         const displayLabel = emp.name ? emp.name : '직원 급여';
         document.getElementById('modalTitle').textContent = displayLabel + ' 설정';
@@ -1131,8 +1151,8 @@
             let sumTax = 0;
             let sumDeduction = 0;
             for (const r of data.results) {
-                const nameDisplay = r.employee_name || '-';
-                const roleDisplay = r.employee_role ? ` <span style="color:#9ca3af; font-size:0.75rem;">${r.employee_role}</span>` : '';
+                const nameDisplay = esc(r.employee_name) || '-';
+                const roleDisplay = r.employee_role ? ` <span style="color:#9ca3af; font-size:0.75rem;">${esc(r.employee_role)}</span>` : '';
                 const taxAmt = r.tax ? r.tax.total_tax : 0;
                 sumTax += taxAmt;
                 sumDeduction += r.total_deduction || (r.total_employee + taxAmt);
