@@ -100,6 +100,69 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* 계산 기준 안내 */
+        .guide-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .guide-section:last-child { border-bottom: none; margin-bottom: 0; }
+        .guide-section h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 0.6rem;
+        }
+        .guide-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        .guide-table th, .guide-table td {
+            padding: 0.4rem 0.6rem;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        .guide-table th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.78rem;
+        }
+        .guide-table .gl {
+            font-weight: 600;
+            color: #374151;
+            background: #f9fafb;
+            white-space: nowrap;
+            width: 130px;
+        }
+        .guide-note {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-top: 0.4rem;
+            padding-left: 0.3rem;
+        }
+        .guide-steps { margin-top: 0.5rem; }
+        .step {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .step-num {
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-top: 0.1rem;
+        }
+
         footer { text-align: center; padding: 2rem; font-size: 0.8rem; color: #9ca3af; }
 
         @media (max-width: 600px) {
@@ -263,6 +326,153 @@
     <div class="btn-row">
         <button class="btn btn-danger" onclick="resetSettings()">기본값 초기화</button>
         <button class="btn btn-primary" id="saveBtn" onclick="saveSettings()">저장</button>
+    </div>
+
+    <!-- 계산 기준 안내 -->
+    <div class="card" style="margin-top:2rem; border-top:3px solid #2563eb;">
+        <h2 style="font-size:1.15rem; margin-bottom:1.2rem;">계산 기준 안내</h2>
+
+        <!-- 기본급 계산 -->
+        <div class="guide-section">
+            <h3>1. 기본급 계산</h3>
+            <table class="guide-table">
+                <tr><td class="gl">월급제</td><td>기본급 직접 입력 (209시간 기준, 주휴수당 포함)</td></tr>
+                <tr><td class="gl">시급제</td><td>시급 x 주 소정근로시간 x 4.345주 (근로분만, 주휴수당 별도)</td></tr>
+            </table>
+            <div class="guide-note">209시간 = (주 40시간 + 주휴 8시간) x 4.345주</div>
+        </div>
+
+        <!-- 주휴수당 -->
+        <div class="guide-section">
+            <h3>2. 주휴수당</h3>
+            <table class="guide-table">
+                <tr><td class="gl">대상</td><td>주 15시간 이상 근무, 소정근로일 개근</td></tr>
+                <tr><td class="gl">월급제</td><td>0원 (기본급 209시간에 이미 포함)</td></tr>
+                <tr><td class="gl">시급제</td><td>시급 x 주휴시간 x 4.345주</td></tr>
+                <tr><td class="gl">주휴시간</td><td>(주 소정근로시간 / 40) x 8시간</td></tr>
+            </table>
+        </div>
+
+        <!-- 법정 가산수당 -->
+        <div class="guide-section">
+            <h3>3. 법정 가산수당 (5인 이상 사업장)</h3>
+            <table class="guide-table">
+                <tr><td class="gl">연장근로수당</td><td>통상시급 x <strong>1.5</strong> x 연장시간 (주 40시간 초과)</td></tr>
+                <tr><td class="gl">휴일근로수당</td><td>통상시급 x <strong>1.5</strong> x 휴일근로시간</td></tr>
+                <tr><td class="gl">야간근로수당</td><td>통상시급 x <strong>0.5</strong> x 야간시간 (22시~06시)</td></tr>
+            </table>
+            <div class="guide-note">5인 미만 사업장: 가산수당 법적 의무 없음 (주휴수당만 의무)</div>
+        </div>
+
+        <!-- 4대 보험 -->
+        <div class="guide-section">
+            <h3>4. 4대 보험 (과세 소득 기준)</h3>
+            <table class="guide-table">
+                <tr><th style="width:130px;">항목</th><th>사업주</th><th>근로자</th><th>비고</th></tr>
+                <tr><td class="gl">국민연금</td><td>4.5%</td><td>4.5%</td><td>상·하한액 적용</td></tr>
+                <tr><td class="gl">건강보험</td><td>3.545%</td><td>3.545%</td><td></td></tr>
+                <tr><td class="gl">장기요양</td><td>12.81%</td><td>12.81%</td><td>건강보험료 대비</td></tr>
+                <tr><td class="gl">고용보험</td><td>0.9%</td><td>0.9%</td><td></td></tr>
+                <tr><td class="gl">산재보험</td><td>0.7%</td><td>-</td><td>사업주 전액, 업종별 상이</td></tr>
+            </table>
+            <div class="guide-note">* 위 요율은 설정에서 변경 가능합니다</div>
+        </div>
+
+        <!-- 소득세 -->
+        <div class="guide-section">
+            <h3>5. 소득세 계산 과정</h3>
+            <div class="guide-steps">
+                <div class="step">
+                    <span class="step-num">1</span>
+                    <div>
+                        <strong>연간 총급여</strong> = 월 과세소득 x 12
+                    </div>
+                </div>
+                <div class="step">
+                    <span class="step-num">2</span>
+                    <div>
+                        <strong>근로소득공제</strong>
+                        <table class="guide-table" style="margin-top:0.4rem;">
+                            <tr><td class="gl">500만 이하</td><td>70%</td></tr>
+                            <tr><td class="gl">500~1,500만</td><td>350만 + 초과액 x 40%</td></tr>
+                            <tr><td class="gl">1,500~4,500만</td><td>750만 + 초과액 x 15%</td></tr>
+                            <tr><td class="gl">4,500~1억</td><td>1,200만 + 초과액 x 5%</td></tr>
+                            <tr><td class="gl">1억 초과</td><td>1,475만 + 초과액 x 2%</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="step">
+                    <span class="step-num">3</span>
+                    <div>
+                        <strong>공제 항목</strong>
+                        <div style="font-size:0.82rem; color:#4b5563; margin-top:0.3rem; line-height:1.7;">
+                            - 인적공제: 부양가족 x 150만원/인<br>
+                            - 4대 보험료 공제 (근로자 부담분)<br>
+                            - 표준세액공제: 13만원
+                        </div>
+                    </div>
+                </div>
+                <div class="step">
+                    <span class="step-num">4</span>
+                    <div>
+                        <strong>종합소득세율</strong>
+                        <table class="guide-table" style="margin-top:0.4rem;">
+                            <tr><th>과세표준</th><th>세율</th><th>누진공제</th></tr>
+                            <tr><td class="gl">1,400만 이하</td><td>6%</td><td>0</td></tr>
+                            <tr><td class="gl">1,400~5,000만</td><td>15%</td><td>126만</td></tr>
+                            <tr><td class="gl">5,000~8,800만</td><td>24%</td><td>576만</td></tr>
+                            <tr><td class="gl">8,800~1.5억</td><td>35%</td><td>1,544만</td></tr>
+                            <tr><td class="gl">1.5~3억</td><td>38%</td><td>1,994만</td></tr>
+                            <tr><td class="gl">3~5억</td><td>40%</td><td>2,594만</td></tr>
+                            <tr><td class="gl">5~10억</td><td>42%</td><td>3,594만</td></tr>
+                            <tr><td class="gl">10억 초과</td><td>45%</td><td>6,594만</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="step">
+                    <span class="step-num">5</span>
+                    <div>
+                        <strong>근로소득 세액공제</strong>
+                        <div style="font-size:0.82rem; color:#4b5563; margin-top:0.3rem; line-height:1.7;">
+                            - 산출세액 130만원 이하: 산출세액 x 55%<br>
+                            - 산출세액 130만원 초과: 71.5만 + 초과액 x 30%
+                        </div>
+                    </div>
+                </div>
+                <div class="step">
+                    <span class="step-num">6</span>
+                    <div>
+                        <strong>월 원천징수</strong>
+                        <div style="font-size:0.82rem; color:#4b5563; margin-top:0.3rem; line-height:1.7;">
+                            - 월 소득세 = 연간 최종 세액 / 12 (10원 단위 절사)<br>
+                            - 월 주민세 = 월 소득세 x 10%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 비과세 -->
+        <div class="guide-section">
+            <h3>6. 비과세 수당 한도</h3>
+            <table class="guide-table">
+                <tr><td class="gl">식대</td><td>월 20만원까지 비과세, 초과분 과세</td></tr>
+                <tr><td class="gl">유류대 (자가운전보조금)</td><td>월 20만원까지 비과세, 초과분 과세</td></tr>
+                <tr><td class="gl">육아수당</td><td>월 10만원까지 비과세, 초과분 과세</td></tr>
+            </table>
+            <div class="guide-note">비과세 소득은 4대 보험 산정 및 소득세 과세 대상에서 제외됩니다</div>
+        </div>
+
+        <!-- 실수령액 -->
+        <div class="guide-section">
+            <h3>7. 실수령액 공식</h3>
+            <div style="background:#f0f4ff; padding:1rem; border-radius:8px; font-size:0.95rem; text-align:center; font-weight:600; color:#2563eb;">
+                실수령액 = 총 지급액 - 4대 보험(근로자) - 소득세 - 주민세
+            </div>
+            <div class="guide-note" style="margin-top:0.5rem;">
+                총 지급액 = 과세 소득(기본급 + 과세 수당) + 비과세 소득
+            </div>
+        </div>
     </div>
 </div>
 
