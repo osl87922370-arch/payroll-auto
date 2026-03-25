@@ -721,16 +721,24 @@
         setTimeout(() => t.classList.remove('show'), 2000);
     }
 
+    // ── localStorage 직원 관리 ──────────────────────
+    function getEmployees() {
+        const data = localStorage.getItem('payroll_employees');
+        return data ? JSON.parse(data) : [];
+    }
+
+    function saveEmployees(employees) {
+        localStorage.setItem('payroll_employees', JSON.stringify(employees));
+    }
+
+    function generateId() {
+        return 'emp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
     // ── 직원 목록 로드 ────────────────────────────────
     async function loadEmployees() {
-        try {
-            const res = await fetch(API + '/api/employees/');
-            if (!res.ok) throw new Error('직원 목록을 불러올 수 없습니다.');
-            const employees = await res.json();
-            renderEmployeeGrid(employees);
-        } catch (e) {
-            showToast(e.message || '서버 연결에 실패했습니다.');
-        }
+        const employees = getEmployees();
+        renderEmployeeGrid(employees);
     }
 
     function renderEmployeeGrid(employees) {
@@ -786,34 +794,33 @@
         const btn = document.getElementById('addBtn');
         btn.disabled = true;
         btn.textContent = '추가 중...';
-        try {
-            const res = await fetch(API + '/api/employees/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: '', role: '' }),
-            });
-            if (!res.ok) throw new Error();
-            showToast('직원이 추가되었습니다.');
-            loadEmployees();
-        } catch (e) {
-            showToast('추가에 실패했습니다.');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = '+ 직원 추가';
-        }
+
+        const employees = getEmployees();
+        const newEmp = {
+            id: generateId(),
+            name: '',
+            role: '',
+            base_salary: 0,
+            dependents: 1,
+            allowances: {},
+        };
+        employees.push(newEmp);
+        saveEmployees(employees);
+        showToast('직원이 추가되었습니다.');
+        loadEmployees();
+
+        btn.disabled = false;
+        btn.textContent = '+ 직원 추가';
     }
 
     // ── 직원 삭제 ─────────────────────────────────────
     async function deleteEmployee(empId, empName) {
         if (!confirm(`"${empName}" 직원을 삭제하시겠습니까?\n삭제하면 급여 설정도 함께 삭제됩니다.`)) return;
-        try {
-            const res = await fetch(API + '/api/employees/' + empId, { method: 'DELETE' });
-            if (!res.ok) throw new Error();
-            showToast('삭제되었습니다.');
-            loadEmployees();
-        } catch (e) {
-            showToast('삭제에 실패했습니다.');
-        }
+        let employees = getEmployees();
+        employees = employees.filter(e => e.id !== empId);
+        saveEmployees(employees);
+        showToast('삭제되었습니다.');
+        loadEmployees();
     }
 
     // ── 모달 ──────────────────────────────────────────
@@ -997,13 +1004,10 @@
 
     async function openModal(empId) {
         currentEmployeeId = empId;
-        let emp;
-        try {
-            const res = await fetch(API + '/api/employees/' + empId);
-            if (!res.ok) throw new Error('직원 정보를 불러올 수 없습니다.');
-            emp = await res.json();
-        } catch (e) {
-            showToast(e.message || '서버 연결에 실패했습니다.');
+        const employees = getEmployees();
+        const emp = employees.find(e => e.id === empId);
+        if (!emp) {
+            showToast('직원 정보를 찾을 수 없습니다.');
             return;
         }
 
@@ -1107,13 +1111,11 @@
         btn.textContent = '저장 중...';
 
         try {
-            const res = await fetch(API + '/api/employees/' + currentEmployeeId, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-
-            if (!res.ok) throw new Error('저장 실패');
+            const employees = getEmployees();
+            const idx = employees.findIndex(e => e.id === currentEmployeeId);
+            if (idx === -1) throw new Error('직원을 찾을 수 없습니다.');
+            employees[idx] = { ...employees[idx], ...body };
+            saveEmployees(employees);
 
             showToast('저장되었습니다.');
             closeModal();
@@ -1133,27 +1135,50 @@
         btn.innerHTML = '<span class="spinner"></span> 계산 중...';
 
         try {
-            const res = await fetch(API + '/api/employees/calculate-all', { method: 'POST' });
-            if (!res.ok) throw new Error();
-            const data = await res.json();
+            const employees = getEmployees();
+            const validEmps = employees.filter(e => e.base_salary > 0);
 
-            if (data.results.length === 0) {
+            if (validEmps.length === 0) {
                 showToast('기본급이 설정된 직원이 없습니다.');
                 return;
             }
 
+            const results = [];
+            for (const emp of validEmps) {
+                const res = await fetch(API + '/api/payroll/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        base_salary: emp.base_salary,
+                        dependents: emp.dependents || 1,
+                        allowances: emp.allowances || {},
+                    }),
+                });
+                if (!res.ok) continue;
+                const data = await res.json();
+                data.employee_id = emp.id;
+                data.employee_name = emp.name;
+                data.employee_role = emp.role;
+                results.push(data);
+            }
+
             // 요약
-            document.getElementById('sumTotalPay').textContent = fmt(data.total_pay_sum) + '원';
-            document.getElementById('sumEmployer').textContent = fmt(data.total_employer_sum) + '원';
-            document.getElementById('sumEmployee').textContent = fmt(data.total_employee_sum) + '원';
-            document.getElementById('sumNetPay').textContent = fmt(data.total_net_pay_sum) + '원';
+            const totalPaySum = results.reduce((s, r) => s + r.total_pay, 0);
+            const totalEmployerSum = results.reduce((s, r) => s + r.total_employer, 0);
+            const totalEmployeeSum = results.reduce((s, r) => s + r.total_employee, 0);
+            const totalNetPaySum = results.reduce((s, r) => s + r.net_pay, 0);
+
+            document.getElementById('sumTotalPay').textContent = fmt(totalPaySum) + '원';
+            document.getElementById('sumEmployer').textContent = fmt(totalEmployerSum) + '원';
+            document.getElementById('sumEmployee').textContent = fmt(totalEmployeeSum) + '원';
+            document.getElementById('sumNetPay').textContent = fmt(totalNetPaySum) + '원';
             document.getElementById('costSummary').classList.add('visible');
 
             // 테이블
             let html = '';
             let sumTax = 0;
             let sumDeduction = 0;
-            for (const r of data.results) {
+            for (const r of results) {
                 const nameDisplay = esc(r.employee_name) || '-';
                 const roleDisplay = r.employee_role ? ` <span style="color:#9ca3af; font-size:0.75rem;">${esc(r.employee_role)}</span>` : '';
                 const taxAmt = r.tax ? r.tax.total_tax : 0;
@@ -1171,13 +1196,13 @@
                 </tr>`;
             }
             html += `<tr class="total-row">
-                <td>합계 (${data.results.length}명)</td>
-                <td>${fmt(data.total_pay_sum)}원</td>
-                <td class="employer-val">${fmt(data.total_employer_sum)}원</td>
-                <td class="employee-val">${fmt(data.total_employee_sum)}원</td>
+                <td>합계 (${results.length}명)</td>
+                <td>${fmt(totalPaySum)}원</td>
+                <td class="employer-val">${fmt(totalEmployerSum)}원</td>
+                <td class="employee-val">${fmt(totalEmployeeSum)}원</td>
                 <td style="color:#9333ea;">${fmt(sumTax)}원</td>
                 <td style="color:#dc2626; font-weight:600;">${fmt(sumDeduction)}원</td>
-                <td><strong>${fmt(data.total_net_pay_sum)}원</strong></td>
+                <td><strong>${fmt(totalNetPaySum)}원</strong></td>
                 <td></td>
             </tr>`;
 
