@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용 가이드 - 급여 자동정산</title>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KL42Q08GYN"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-KL42Q08GYN');</script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f2f5; color: #1a1a2e; min-height: 100vh; line-height: 1.7;
+        }
+        header {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white; padding: 1.5rem 2rem; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        header h1 { font-size: 1.5rem; font-weight: 700; }
+        header p { margin-top: 0.3rem; font-size: 0.85rem; opacity: 0.85; }
+        nav {
+            display: flex; justify-content: center; gap: 2rem;
+            background: #1e3a8a; padding: 0.5rem; flex-wrap: wrap;
+        }
+        nav a {
+            color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.85rem;
+            font-weight: 500; padding: 0.3rem 0.5rem; border-radius: 4px; transition: all 0.15s;
+        }
+        nav a:hover, nav a.active { color: white; background: rgba(255,255,255,0.1); }
+
+        .container { max-width: 800px; margin: 1.5rem auto; padding: 0 1rem; }
+
+        .card {
+            background: white; border-radius: 12px; padding: 2rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 1.5rem;
+        }
+        .card h2 {
+            font-size: 1.2rem; font-weight: 700; color: #1e40af;
+            margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e0e7ff;
+        }
+        .card h3 {
+            font-size: 1rem; font-weight: 700; color: #374151;
+            margin: 1.2rem 0 0.5rem;
+        }
+
+        .step-list { counter-reset: step; list-style: none; padding: 0; }
+        .step-list li {
+            counter-increment: step; padding: 0.8rem 0 0.8rem 3rem;
+            position: relative; border-bottom: 1px solid #f3f4f6;
+        }
+        .step-list li:last-child { border-bottom: none; }
+        .step-list li::before {
+            content: counter(step);
+            position: absolute; left: 0; top: 0.7rem;
+            width: 28px; height: 28px; background: #2563eb; color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.82rem; font-weight: 700;
+        }
+        .step-list li strong { color: #1e40af; }
+
+        .tip {
+            background: #f0f4ff; border-left: 4px solid #2563eb;
+            padding: 0.8rem 1rem; border-radius: 0 8px 8px 0;
+            font-size: 0.88rem; margin: 0.8rem 0;
+        }
+        .tip::before { content: "TIP "; font-weight: 700; color: #2563eb; }
+
+        .warning {
+            background: #fef2f2; border-left: 4px solid #dc2626;
+            padding: 0.8rem 1rem; border-radius: 0 8px 8px 0;
+            font-size: 0.88rem; margin: 0.8rem 0;
+        }
+        .warning::before { content: "주의 "; font-weight: 700; color: #dc2626; }
+
+        .feature-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem; margin: 1rem 0;
+        }
+        .feature-item {
+            background: #f8fafc; border-radius: 8px; padding: 1rem;
+            text-align: center; border: 1px solid #e5e7eb;
+        }
+        .feature-item .icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+        .feature-item .label { font-size: 0.88rem; font-weight: 600; color: #374151; }
+        .feature-item .desc { font-size: 0.78rem; color: #9ca3af; margin-top: 0.2rem; }
+
+        .menu-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .menu-table th, .menu-table td { padding: 0.6rem 0.8rem; border: 1px solid #e5e7eb; }
+        .menu-table th { background: #f1f5f9; font-weight: 600; text-align: left; }
+        .menu-table td:first-child { font-weight: 600; color: #2563eb; white-space: nowrap; }
+
+        footer { text-align: center; padding: 2rem; font-size: 0.8rem; color: #9ca3af; }
+
+        @media (max-width: 600px) {
+            .feature-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>사용 가이드</h1>
+    <p>급여 자동정산 서비스 이용 안내</p>
+</header>
+<nav>
+    <a href="/">급여 계산기</a>
+    <a href="/employees">직원 관리</a>
+    <a href="/settings">설정</a>
+    <a href="/guide" class="active">사용 가이드</a>
+</nav>
+
+<div class="container">
+
+    <!-- 서비스 소개 -->
+    <div class="card">
+        <h2>서비스 소개</h2>
+        <p>급여 자동정산 서비스는 소규모 사업장의 급여 계산을 도와주는 <strong>무료 웹 서비스</strong>입니다.</p>
+        <div class="feature-grid">
+            <div class="feature-item">
+                <div class="icon">&#128178;</div>
+                <div class="label">급여 계산기</div>
+                <div class="desc">4대보험, 소득세 자동 계산</div>
+            </div>
+            <div class="feature-item">
+                <div class="icon">&#128101;</div>
+                <div class="label">직원 관리</div>
+                <div class="desc">직원별 급여 설정 및 관리</div>
+            </div>
+            <div class="feature-item">
+                <div class="icon">&#128196;</div>
+                <div class="label">급여 명세서</div>
+                <div class="desc">인쇄용 명세서 자동 생성</div>
+            </div>
+            <div class="feature-item">
+                <div class="icon">&#9881;</div>
+                <div class="label">설정</div>
+                <div class="desc">보험 요율, 최저임금 관리</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 페이지별 안내 -->
+    <div class="card">
+        <h2>페이지별 기능 안내</h2>
+        <table class="menu-table">
+            <tr><th>페이지</th><th>기능</th></tr>
+            <tr><td>급여 계산기</td><td>월급 또는 시급을 입력하면 4대보험, 소득세, 실수령액을 자동 계산합니다.</td></tr>
+            <tr><td>직원 관리</td><td>직원을 등록하고 개별 급여를 설정합니다. 전체 직원 일괄 계산도 가능합니다.</td></tr>
+            <tr><td>급여 명세서</td><td>직원별 명세서를 생성하고 인쇄할 수 있습니다.</td></tr>
+            <tr><td>설정</td><td>4대보험 요율, 최저임금, 비과세 한도를 매년 업데이트합니다.</td></tr>
+        </table>
+    </div>
+
+    <!-- 급여 계산기 사용법 -->
+    <div class="card">
+        <h2>1. 급여 계산기 사용법</h2>
+
+        <h3>월급제 직원</h3>
+        <ol class="step-list">
+            <li><strong>월급 직접 입력</strong> 모드를 선택합니다.</li>
+            <li>기본급을 입력합니다. (예: 3,500,000원)</li>
+            <li>부양가족 수를 입력합니다. (본인 포함, 기본 1명)</li>
+            <li>해당되는 수당이 있으면 입력합니다. (직책수당, 식대 등)</li>
+            <li><strong>계산하기</strong> 버튼을 클릭합니다.</li>
+        </ol>
+        <div class="tip">월급제는 기본급에 주휴수당이 이미 포함되어 있어 주휴수당이 0원으로 표시됩니다.</div>
+
+        <h3>시급제 직원</h3>
+        <ol class="step-list">
+            <li><strong>시급 x 근무시간</strong> 모드를 선택합니다.</li>
+            <li>시급을 입력합니다. (예: 10,320원)</li>
+            <li>일 근무시간과 주 근무일수를 입력합니다.</li>
+            <li>기본급과 주휴수당이 자동 계산됩니다.</li>
+            <li><strong>계산하기</strong> 버튼을 클릭합니다.</li>
+        </ol>
+        <div class="tip">시급제는 주 15시간 이상 근무 시 주휴수당이 자동으로 계산됩니다.</div>
+
+        <h3>사업장 규모 설정</h3>
+        <p><strong>5인 이상 사업장</strong>을 선택하면 연장/휴일/야간 근로에 법정 가산수당(1.5배, 0.5배)이 적용됩니다. 5인 미만은 가산수당 의무가 없습니다.</p>
+    </div>
+
+    <!-- 직원 관리 사용법 -->
+    <div class="card">
+        <h2>2. 직원 관리 사용법</h2>
+
+        <h3>직원 추가</h3>
+        <ol class="step-list">
+            <li>직원 관리 페이지에서 <strong>+ 직원 추가</strong> 버튼을 클릭합니다.</li>
+            <li>새 직원 카드가 생성되면 <strong>설정</strong> 버튼을 클릭합니다.</li>
+            <li>성명, 직책, 부양가족 수를 입력합니다.</li>
+            <li>급여 모드(월급/시급)를 선택하고 금액을 입력합니다.</li>
+            <li>수당 항목을 입력합니다. (해당 시)</li>
+            <li><strong>저장</strong> 버튼을 클릭합니다.</li>
+        </ol>
+
+        <h3>전체 급여 계산</h3>
+        <ol class="step-list">
+            <li>직원들의 급여를 모두 설정한 후, <strong>전체 급여 계산</strong> 버튼을 클릭합니다.</li>
+            <li>모든 직원의 급여가 한 번에 계산되어 요약 테이블로 표시됩니다.</li>
+            <li>총 지급액, 사업주 부담, 공제액, 실수령액을 한눈에 확인할 수 있습니다.</li>
+        </ol>
+
+        <h3>급여 명세서 출력</h3>
+        <ol class="step-list">
+            <li>직원 카드에서 <strong>명세서</strong> 버튼을 클릭합니다.</li>
+            <li>급여 명세서가 표시되면 <strong>인쇄하기</strong> 버튼을 클릭합니다.</li>
+            <li>A4 용지에 최적화된 명세서가 인쇄됩니다.</li>
+        </ol>
+        <div class="tip">명세서에는 지급 내역, 공제 내역, 사업주 부담 내역, 실수령액이 모두 포함됩니다.</div>
+    </div>
+
+    <!-- 설정 사용법 -->
+    <div class="card">
+        <h2>3. 설정 관리</h2>
+        <p>매년 변경되는 요율을 업데이트해야 정확한 계산이 가능합니다.</p>
+
+        <table class="menu-table" style="margin-top:1rem;">
+            <tr><th>항목</th><th>변경 시기</th></tr>
+            <tr><td>최저임금</td><td>매년 1월</td></tr>
+            <tr><td>건강보험 요율</td><td>매년 1월</td></tr>
+            <tr><td>장기요양보험 요율</td><td>매년 1월</td></tr>
+            <tr><td>국민연금 요율</td><td>비정기 (현재 9% 유지)</td></tr>
+            <tr><td>고용보험 요율</td><td>비정기</td></tr>
+            <tr><td>산재보험 요율</td><td>매년 1월 (업종별)</td></tr>
+        </table>
+
+        <div class="warning">요율이 변경되었는데 설정을 업데이트하지 않으면 계산 결과가 부정확할 수 있습니다.</div>
+        <div class="tip">설정 페이지 하단의 <strong>계산 기준 안내</strong>에서 각 항목의 계산 방식을 상세히 확인할 수 있습니다.</div>
+    </div>
+
+    <!-- 자주 묻는 질문 -->
+    <div class="card">
+        <h2>자주 묻는 질문</h2>
+
+        <h3>Q. 데이터는 어디에 저장되나요?</h3>
+        <p>서버에 JSON 파일로 저장됩니다. 별도의 데이터베이스는 사용하지 않습니다.</p>
+
+        <h3>Q. 여러 사업장에서 동시에 사용할 수 있나요?</h3>
+        <p>현재 버전은 단일 사업장용입니다. 모든 접속자가 같은 직원 데이터를 공유합니다.</p>
+
+        <h3>Q. 계산 결과는 정확한가요?</h3>
+        <p>간이세액표 기준으로 추정치를 계산합니다. 정확한 세액은 연말정산 시 확정됩니다.</p>
+
+        <h3>Q. 비용이 발생하나요?</h3>
+        <p>완전 무료입니다. 어떤 비용도 발생하지 않습니다.</p>
+
+        <h3>Q. 접속이 느릴 때가 있어요.</h3>
+        <p>무료 서버를 사용하고 있어 15분 이상 미사용 시 서버가 잠듭니다. 재접속 시 30~60초 정도 대기하면 정상 작동합니다.</p>
+    </div>
+
+    <!-- 문의 -->
+    <div class="card" style="text-align:center; background: linear-gradient(135deg, #f0f4ff, #e0e7ff);">
+        <h2 style="border:none; margin-bottom:0.5rem;">문의 및 건의</h2>
+        <p style="font-size:0.9rem; color:#4b5563;">서비스 이용 중 문의사항이나 개선 건의가 있으시면<br>아래 이메일로 연락해 주세요.</p>
+        <p style="margin-top:0.8rem; font-size:1.1rem; font-weight:700; color:#2563eb;">osl87922370@gmail.com</p>
+    </div>
+
+</div>
+
+<footer>
+    급여 자동정산 서비스 v0.3.0
+</footer>
+
+</body>
+</html>

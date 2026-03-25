@@ -50,6 +50,11 @@ def settings_page():
     return FileResponse(static_dir / "settings.html")
 
 
+@app.get("/guide")
+def guide_page():
+    return FileResponse(static_dir / "guide.html")
+
+
 @app.get("/statement/{employee_id}")
 def statement_page(employee_id: str):
     return FileResponse(static_dir / "statement.html")
